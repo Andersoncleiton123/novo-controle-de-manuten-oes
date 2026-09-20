@@ -120,6 +120,9 @@ export default async function VeiculosPage({
                   <p className="mt-1 truncate text-xs font-medium text-gray-700">{v.cliente_atual}</p>
                 ) : null}
                 {v.local_atual ? <p className="mt-0.5 truncate text-xs text-gray-500">📍 {v.local_atual}</p> : null}
+                {v.observacoes ? (
+                  <p className="mt-1 truncate text-xs italic text-gray-400">{v.observacoes}</p>
+                ) : null}
               </Link>
             </Card>
           ))}
