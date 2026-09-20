@@ -55,7 +55,8 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
           </div>
           {order.vehicles ? (
             <Link href={`/veiculos/${order.vehicle_id}`} className="text-sm text-brand-600 hover:underline">
-              {order.vehicles.numero_interno ?? order.vehicles.identificador} — {order.vehicles.nome ?? order.vehicles.identificador}
+              {order.vehicles.numero_interno ?? order.vehicles.nome ?? order.vehicles.identificador} (
+              {order.vehicles.identificador})
             </Link>
           ) : null}
         </div>

@@ -64,7 +64,7 @@ export function OrderForm({
             </option>
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>
-                {v.numero_interno ?? v.identificador} — {v.nome ?? v.identificador}
+                {v.numero_interno ?? v.nome ?? v.identificador} ({v.identificador})
               </option>
             ))}
           </Select>

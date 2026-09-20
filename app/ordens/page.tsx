@@ -75,7 +75,9 @@ export default async function OrdensPage({
                 <Link href={`/ordens/${o.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">
-                      {o.numero_os} · {o.vehicles?.numero_interno ?? o.vehicles?.identificador} — {o.problema_servico}
+                      {o.numero_os} · {o.vehicles?.numero_interno ?? o.vehicles?.nome}{" "}
+                      <span className="font-normal text-gray-400">({o.vehicles?.identificador})</span> —{" "}
+                      {o.problema_servico}
                     </p>
                     <p className="text-xs text-gray-500">
                       {ORDER_TIPO_LABEL[o.tipo]} · Aberta em {formatDate(o.data_abertura)}
