@@ -19,7 +19,7 @@ export const VEHICLE_STATUS_LABEL: Record<VehicleStatus, string> = {
 export const VEHICLE_STATUS_COLOR: Record<VehicleStatus, string> = {
   em_operacao: "bg-blue-100 text-blue-800",
   disponivel: "bg-green-100 text-green-800",
-  em_manutencao: "bg-orange-100 text-orange-800",
+  em_manutencao: "bg-yellow-100 text-yellow-800",
   parado: "bg-red-100 text-red-800",
   desmobilizado: "bg-gray-200 text-gray-600",
 };
