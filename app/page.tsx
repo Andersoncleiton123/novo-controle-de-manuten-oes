@@ -5,8 +5,14 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
-import { NIVEL_ALERTA_COLOR, NIVEL_ALERTA_ICON, NIVEL_ALERTA_LABEL } from "@/lib/labels";
-import type { AlertFeedItem, DashboardSummary, VehiclePlanStatus } from "@/lib/types";
+import {
+  NIVEL_ALERTA_COLOR,
+  NIVEL_ALERTA_ICON,
+  NIVEL_ALERTA_LABEL,
+  VEHICLE_STATUS_COLOR,
+  VEHICLE_STATUS_LABEL,
+} from "@/lib/labels";
+import type { AlertFeedItem, DashboardSummary, Vehicle, VehiclePlanStatus } from "@/lib/types";
 import {
   Truck,
   Wrench,
@@ -25,7 +31,7 @@ const NIVEL_ORDER: Record<string, number> = { atrasada: 0, atencao: 1, proxima: 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ data: summary }, { data: alerts }, { data: planStatus }] = await Promise.all([
+  const [{ data: summary }, { data: alerts }, { data: planStatus }, { data: fleetVehicles }] = await Promise.all([
     supabase.from("v_dashboard_summary").select("*").single<DashboardSummary>(),
     supabase
       .from("v_alerts")
@@ -36,6 +42,12 @@ export default async function DashboardPage() {
       .select("*")
       .in("nivel_alerta", ["atrasada", "atencao", "proxima"])
       .returns<VehiclePlanStatus[]>(),
+    supabase
+      .from("vehicles")
+      .select("id, numero_interno, identificador, nome, status, cliente_atual, local_atual")
+      .neq("status", "desmobilizado")
+      .order("numero_interno")
+      .returns<Pick<Vehicle, "id" | "numero_interno" | "identificador" | "nome" | "status" | "cliente_atual" | "local_atual">[]>(),
   ]);
 
   const sortedAlerts = (alerts ?? []).sort(
@@ -152,6 +164,38 @@ export default async function DashboardPage() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title="Cliente atual por veículo" subtitle="Onde cada veículo está locado agora" />
+        <CardBody className="p-0">
+          {!fleetVehicles || fleetVehicles.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="Nenhum veículo cadastrado" />
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {fleetVehicles.map((v) => (
+                <li key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/veiculos/${v.id}`}
+                      className="truncate text-sm font-medium text-gray-900 hover:text-brand-700"
+                    >
+                      {v.numero_interno ?? v.nome ?? v.identificador}{" "}
+                      <span className="font-normal text-gray-400">({v.identificador})</span>
+                    </Link>
+                    <p className="truncate text-xs text-gray-500">
+                      {v.cliente_atual ?? "Sem cliente informado"}
+                      {v.local_atual ? ` · ${v.local_atual}` : ""}
+                    </p>
+                  </div>
+                  <Badge className={VEHICLE_STATUS_COLOR[v.status]}>{VEHICLE_STATUS_LABEL[v.status]}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }
