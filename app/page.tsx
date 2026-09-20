@@ -132,7 +132,8 @@ export default async function DashboardPage() {
                         href={`/veiculos/${p.vehicle_id}`}
                         className="truncate text-sm font-medium text-gray-900 hover:text-brand-700"
                       >
-                        {p.vehicle_nome ?? p.vehicle_placa} · {p.plano_nome}
+                        {p.vehicle_nome ?? p.vehicle_numero_interno ?? p.vehicle_placa}{" "}
+                        <span className="font-normal text-gray-400">({p.vehicle_placa})</span> · {p.plano_nome}
                       </Link>
                       <Badge className={NIVEL_ALERTA_COLOR[p.nivel_alerta]}>
                         {NIVEL_ALERTA_LABEL[p.nivel_alerta]}
