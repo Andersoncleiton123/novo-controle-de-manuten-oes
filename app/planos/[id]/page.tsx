@@ -35,9 +35,6 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
       .returns<Pick<Vehicle, "id" | "nome" | "identificador" | "numero_interno">[]>(),
   ]);
 
-  const linkedVehicleIds = new Set((linkedVehicles ?? []).map((v) => v.vehicle_id));
-  const availableVehicles = (allVehicles ?? []).filter((v) => !linkedVehicleIds.has(v.id));
-
   const linkAction = linkPlanToVehicle.bind(null, id);
 
   return (
@@ -105,11 +102,14 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
         </CardBody>
       </Card>
 
-      {availableVehicles.length > 0 ? (
+      {allVehicles && allVehicles.length > 0 ? (
         <Card>
-          <CardHeader title="Vincular a um veículo" />
+          <CardHeader
+            title="Vincular ou corrigir um veículo"
+            subtitle="Selecionar um veículo já vinculado atualiza a última execução registrada"
+          />
           <CardBody>
-            <LinkVehicleForm vehicles={availableVehicles} action={linkAction} />
+            <LinkVehicleForm vehicles={allVehicles} action={linkAction} />
           </CardBody>
         </Card>
       ) : null}
