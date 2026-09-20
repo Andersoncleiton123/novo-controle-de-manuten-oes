@@ -79,6 +79,20 @@ export async function updateVehicle(vehicleId: string, formData: FormData): Prom
   return { id: vehicleId };
 }
 
+export async function deleteVehicle(vehicleId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("vehicles").delete().eq("id", vehicleId);
+
+  if (error) {
+    return { error: `Não foi possível excluir o veículo: ${error.message}` };
+  }
+
+  revalidatePath("/veiculos");
+  revalidatePath("/");
+  return {};
+}
+
 export async function createMeasurement(vehicleId: string, formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
 
