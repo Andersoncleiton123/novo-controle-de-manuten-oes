@@ -60,7 +60,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Pr
             <option value="">Todos os veículos</option>
             {(vehicles ?? []).map((v) => (
               <option key={v.id} value={v.id}>
-                {v.numero_interno ?? v.identificador}
+                {v.numero_interno ?? v.nome ?? v.identificador} ({v.identificador})
               </option>
             ))}
           </Select>
