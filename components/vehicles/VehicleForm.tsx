@@ -98,6 +98,17 @@ export function VehicleForm({
         <FieldGroup label="Local onde está locado" htmlFor="local_atual" hint='Ex: "Parque Eólico Ventos do Sul — Caetité/BA"'>
           <Input id="local_atual" name="local_atual" defaultValue={defaultValues?.local_atual ?? ""} />
         </FieldGroup>
+        <FieldGroup label="Início do contrato" htmlFor="contrato_inicio">
+          <Input
+            id="contrato_inicio"
+            name="contrato_inicio"
+            type="date"
+            defaultValue={defaultValues?.contrato_inicio ?? ""}
+          />
+        </FieldGroup>
+        <FieldGroup label="Fim do contrato" htmlFor="contrato_fim">
+          <Input id="contrato_fim" name="contrato_fim" type="date" defaultValue={defaultValues?.contrato_fim ?? ""} />
+        </FieldGroup>
 
         {showReadings ? (
           <>

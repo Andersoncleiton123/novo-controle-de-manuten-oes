@@ -40,6 +40,8 @@ export type Vehicle = {
   horimetro_atual: number;
   cliente_atual: string | null;
   local_atual: string | null;
+  contrato_inicio: string | null;
+  contrato_fim: string | null;
   status: VehicleStatus;
   observacoes: string | null;
   created_at: string;
