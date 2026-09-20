@@ -116,7 +116,10 @@ export default async function VeiculosPage({
                   <span>{formatKm(v.km_atual)}</span>
                   <span>{formatHoras(v.horimetro_atual)}</span>
                 </div>
-                {v.local_atual ? <p className="mt-1 truncate text-xs text-gray-500">📍 {v.local_atual}</p> : null}
+                {v.cliente_atual ? (
+                  <p className="mt-1 truncate text-xs font-medium text-gray-700">{v.cliente_atual}</p>
+                ) : null}
+                {v.local_atual ? <p className="mt-0.5 truncate text-xs text-gray-500">📍 {v.local_atual}</p> : null}
               </Link>
             </Card>
           ))}
