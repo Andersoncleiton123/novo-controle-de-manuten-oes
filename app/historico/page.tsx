@@ -44,7 +44,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Pr
       .returns<Pick<Vehicle, "id" | "nome" | "identificador" | "numero_interno">[]>(),
   ]);
 
-  const vehicleLabel = new Map((vehicles ?? []).map((v) => [v.id, v.numero_interno ?? v.identificador]));
+  const vehicleById = new Map((vehicles ?? []).map((v) => [v.id, v]));
   const total = (history ?? []).reduce((acc, h) => acc + Number(h.custo), 0);
 
   return (
@@ -92,11 +92,21 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Pr
       ) : (
         <Card className="p-0">
           <ul className="divide-y divide-gray-100">
-            {history.map((h) => (
+            {history.map((h) => {
+              const vehicle = vehicleById.get(h.vehicle_id);
+              return (
               <li key={h.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <Link href={`/veiculos/${h.vehicle_id}`} className="truncate text-sm font-medium text-gray-900 hover:text-brand-700">
-                    {vehicleLabel.get(h.vehicle_id) ?? "—"} — {h.servico}
+                    {vehicle ? (
+                      <>
+                        {vehicle.numero_interno ?? vehicle.identificador}{" "}
+                        <span className="font-normal text-gray-400">({vehicle.identificador})</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}{" "}
+                    — {h.servico}
                   </Link>
                   <p className="text-xs text-gray-500">
                     {formatDate(h.data)} · {CATEGORIA_HISTORICO_LABEL[h.categoria] ?? h.categoria}
@@ -107,7 +117,8 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Pr
                 </div>
                 <span className="shrink-0 text-sm font-medium text-gray-700">{formatCurrency(h.custo)}</span>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </Card>
       )}
