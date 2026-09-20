@@ -67,11 +67,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-gray-200 bg-white lg:flex">
         <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            UC
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/icon-192.png" alt="Unic Service" className="h-9 w-9 rounded-lg" />
           <div>
-            <p className="text-sm font-semibold text-gray-900">Unic Car</p>
+            <p className="text-sm font-semibold text-gray-900">Unic Service</p>
             <p className="text-xs text-gray-500">Controle de Manutenção</p>
           </div>
         </div>
@@ -81,10 +80,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
-            UC
-          </div>
-          <p className="text-sm font-semibold text-gray-900">Controle de Manutenção</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/icon-192.png" alt="Unic Service" className="h-8 w-8 rounded-lg" />
+          <p className="text-sm font-semibold text-gray-900">Unic Service</p>
         </div>
         <button
           aria-label="Abrir menu"
