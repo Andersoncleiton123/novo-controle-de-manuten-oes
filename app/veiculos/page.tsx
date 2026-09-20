@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
@@ -88,27 +88,37 @@ export default async function VeiculosPage({
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {vehicles.map((v) => (
-            <Link key={v.id} href={`/veiculos/${v.id}`}>
-              <Card className="h-full p-4 transition-shadow hover:shadow-md">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900">
-                      {v.numero_interno ?? v.identificador}
-                    </p>
-                    <p className="truncate text-xs text-gray-500">{v.nome ?? v.identificador}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
+            <Card key={v.id} className="h-full p-4 transition-shadow hover:shadow-md">
+              <div className="flex items-start justify-between gap-2">
+                <Link href={`/veiculos/${v.id}`} className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-gray-900">
+                    {v.numero_interno ?? v.identificador}
+                  </p>
+                  <p className="truncate text-xs text-gray-500">{v.nome ?? v.identificador}</p>
+                </Link>
+                <div className="flex shrink-0 items-start gap-2">
+                  <div className="flex flex-col items-end gap-1">
                     <Badge className={VEHICLE_STATUS_COLOR[v.status]}>{VEHICLE_STATUS_LABEL[v.status]}</Badge>
                     <Badge className={VEHICLE_TIPO_COLOR[v.tipo]}>{VEHICLE_TIPO_LABEL[v.tipo]}</Badge>
                   </div>
+                  <Link
+                    href={`/veiculos/${v.id}/editar`}
+                    aria-label="Editar veículo"
+                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
+              </div>
+              <Link href={`/veiculos/${v.id}`} className="mt-3 block">
+                <div className="flex items-center justify-between text-xs text-gray-600">
                   <span>{v.identificador}</span>
                   <span>{formatKm(v.km_atual)}</span>
                   <span>{formatHoras(v.horimetro_atual)}</span>
                 </div>
-              </Card>
-            </Link>
+                {v.local_atual ? <p className="mt-1 truncate text-xs text-gray-500">📍 {v.local_atual}</p> : null}
+              </Link>
+            </Card>
           ))}
         </div>
       )}

@@ -95,6 +95,9 @@ export function VehicleForm({
         <FieldGroup label="Cliente atual" htmlFor="cliente_atual" hint="Preenchimento livre — módulo de contratos chega em versão futura">
           <Input id="cliente_atual" name="cliente_atual" defaultValue={defaultValues?.cliente_atual ?? ""} />
         </FieldGroup>
+        <FieldGroup label="Local onde está locado" htmlFor="local_atual" hint='Ex: "Parque Eólico Ventos do Sul — Caetité/BA"'>
+          <Input id="local_atual" name="local_atual" defaultValue={defaultValues?.local_atual ?? ""} />
+        </FieldGroup>
 
         {showReadings ? (
           <>

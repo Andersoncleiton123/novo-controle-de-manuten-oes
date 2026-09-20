@@ -33,6 +33,7 @@ export async function createVehicle(formData: FormData): Promise<ActionResult> {
     km_atual: num(formData.get("km_atual")) ?? 0,
     horimetro_atual: num(formData.get("horimetro_atual")) ?? 0,
     cliente_atual: str(formData.get("cliente_atual")),
+    local_atual: str(formData.get("local_atual")),
     status: (str(formData.get("status")) ?? "disponivel") as VehicleStatus,
     observacoes: str(formData.get("observacoes")),
   };
@@ -61,6 +62,7 @@ export async function updateVehicle(vehicleId: string, formData: FormData): Prom
     ano: num(formData.get("ano")),
     chassi: str(formData.get("chassi")),
     cliente_atual: str(formData.get("cliente_atual")),
+    local_atual: str(formData.get("local_atual")),
     status: (str(formData.get("status")) ?? "disponivel") as VehicleStatus,
     observacoes: str(formData.get("observacoes")),
   };

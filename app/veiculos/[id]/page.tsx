@@ -148,6 +148,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
         <StatCard label="KM atual" value={formatKm(vehicle.km_atual)} />
         <StatCard label="Horímetro atual" value={formatHoras(vehicle.horimetro_atual)} />
         <StatCard label="Cliente atual" value={vehicle.cliente_atual ?? "—"} />
+        <StatCard label="Local onde está locado" value={vehicle.local_atual ?? "—"} />
       </div>
 
       <Card>
