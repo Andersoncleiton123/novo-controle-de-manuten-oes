@@ -8,6 +8,8 @@ export type VehicleStatus =
   | "parado"
   | "desmobilizado";
 
+export type VehicleTipo = "betoneira" | "veiculo";
+
 export type Prioridade = "critica" | "alta" | "media" | "baixa";
 
 export type CorrectiveStatus = "aberto" | "em_ordem" | "resolvido";
@@ -26,7 +28,7 @@ export type NivelAlerta = "em_dia" | "proxima" | "atencao" | "atrasada" | "sem_b
 
 export type Vehicle = {
   id: string;
-  tipo: string;
+  tipo: VehicleTipo;
   identificador: string;
   nome: string | null;
   numero_interno: string | null;

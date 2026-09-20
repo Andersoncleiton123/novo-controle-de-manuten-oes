@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { VEHICLE_STATUS_LABEL } from "@/lib/labels";
+import { VEHICLE_STATUS_LABEL, VEHICLE_TIPO_LABEL } from "@/lib/labels";
 import type { Vehicle } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -47,6 +47,15 @@ export function VehicleForm({
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FieldGroup label="Categoria" htmlFor="tipo" required hint="Só a betoneira entra na frota de locação">
+          <Select id="tipo" name="tipo" defaultValue={defaultValues?.tipo ?? "betoneira"}>
+            {Object.entries(VEHICLE_TIPO_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </FieldGroup>
         <FieldGroup label="Número interno" htmlFor="numero_interno" hint='Ex: "BT 13"'>
           <Input id="numero_interno" name="numero_interno" defaultValue={defaultValues?.numero_interno ?? ""} />
         </FieldGroup>

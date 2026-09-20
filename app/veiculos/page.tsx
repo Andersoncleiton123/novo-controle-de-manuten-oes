@@ -6,24 +6,27 @@ import { LinkButton } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input, Select } from "@/components/ui/Field";
-import { VEHICLE_STATUS_COLOR, VEHICLE_STATUS_LABEL } from "@/lib/labels";
+import { VEHICLE_STATUS_COLOR, VEHICLE_STATUS_LABEL, VEHICLE_TIPO_COLOR, VEHICLE_TIPO_LABEL } from "@/lib/labels";
 import { formatHoras, formatKm } from "@/lib/format";
-import type { Vehicle, VehicleStatus } from "@/lib/types";
+import type { Vehicle, VehicleStatus, VehicleTipo } from "@/lib/types";
 
 export const revalidate = 0;
 
 export default async function VeiculosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; tipo?: string }>;
 }) {
-  const { q, status } = await searchParams;
+  const { q, status, tipo } = await searchParams;
   const supabase = await createClient();
 
   let query = supabase.from("vehicles").select("*").order("numero_interno", { ascending: true });
 
   if (status) {
     query = query.eq("status", status as VehicleStatus);
+  }
+  if (tipo) {
+    query = query.eq("tipo", tipo as VehicleTipo);
   }
   if (q) {
     query = query.or(
@@ -55,6 +58,14 @@ export default async function VeiculosPage({
               className="pl-9"
             />
           </div>
+          <Select name="tipo" defaultValue={tipo ?? ""} className="sm:w-48">
+            <option value="">Betoneira e veículo</option>
+            {Object.entries(VEHICLE_TIPO_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
           <Select name="status" defaultValue={status ?? ""} className="sm:w-56">
             <option value="">Todos os status</option>
             {Object.entries(VEHICLE_STATUS_LABEL).map(([value, label]) => (
@@ -86,7 +97,10 @@ export default async function VeiculosPage({
                     </p>
                     <p className="truncate text-xs text-gray-500">{v.nome ?? v.identificador}</p>
                   </div>
-                  <Badge className={VEHICLE_STATUS_COLOR[v.status]}>{VEHICLE_STATUS_LABEL[v.status]}</Badge>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge className={VEHICLE_STATUS_COLOR[v.status]}>{VEHICLE_STATUS_LABEL[v.status]}</Badge>
+                    <Badge className={VEHICLE_TIPO_COLOR[v.tipo]}>{VEHICLE_TIPO_LABEL[v.tipo]}</Badge>
+                  </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
                   <span>{v.identificador}</span>

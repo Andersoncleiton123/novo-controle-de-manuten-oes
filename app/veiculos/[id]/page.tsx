@@ -17,6 +17,8 @@ import {
   PRIORIDADE_LABEL,
   VEHICLE_STATUS_COLOR,
   VEHICLE_STATUS_LABEL,
+  VEHICLE_TIPO_COLOR,
+  VEHICLE_TIPO_LABEL,
 } from "@/lib/labels";
 import type {
   CorrectiveIssue,
@@ -112,6 +114,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
               {vehicle.numero_interno ?? vehicle.identificador}
             </h1>
             <Badge className={VEHICLE_STATUS_COLOR[vehicle.status]}>{VEHICLE_STATUS_LABEL[vehicle.status]}</Badge>
+            <Badge className={VEHICLE_TIPO_COLOR[vehicle.tipo]}>{VEHICLE_TIPO_LABEL[vehicle.tipo]}</Badge>
           </div>
           <p className="text-sm text-gray-500">
             {[vehicle.nome, vehicle.marca, vehicle.modelo, vehicle.ano].filter(Boolean).join(" · ") ||

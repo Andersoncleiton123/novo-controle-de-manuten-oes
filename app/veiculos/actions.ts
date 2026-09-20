@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { VehicleStatus } from "@/lib/types";
+import type { VehicleStatus, VehicleTipo } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
 
@@ -22,7 +22,7 @@ export async function createVehicle(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
 
   const payload = {
-    tipo: "betoneira",
+    tipo: (str(formData.get("tipo")) ?? "betoneira") as VehicleTipo,
     identificador: str(formData.get("identificador")) ?? "",
     nome: str(formData.get("nome")),
     numero_interno: str(formData.get("numero_interno")),
@@ -52,6 +52,7 @@ export async function updateVehicle(vehicleId: string, formData: FormData): Prom
   const supabase = await createClient();
 
   const payload = {
+    tipo: (str(formData.get("tipo")) ?? "betoneira") as VehicleTipo,
     identificador: str(formData.get("identificador")) ?? "",
     nome: str(formData.get("nome")),
     numero_interno: str(formData.get("numero_interno")),

@@ -5,6 +5,7 @@ import type {
   OrderTipo,
   Prioridade,
   VehicleStatus,
+  VehicleTipo,
 } from "@/lib/types";
 
 export const VEHICLE_STATUS_LABEL: Record<VehicleStatus, string> = {
@@ -21,6 +22,16 @@ export const VEHICLE_STATUS_COLOR: Record<VehicleStatus, string> = {
   em_manutencao: "bg-orange-100 text-orange-800",
   parado: "bg-red-100 text-red-800",
   desmobilizado: "bg-gray-200 text-gray-600",
+};
+
+export const VEHICLE_TIPO_LABEL: Record<VehicleTipo, string> = {
+  betoneira: "Betoneira",
+  veiculo: "Veículo",
+};
+
+export const VEHICLE_TIPO_COLOR: Record<VehicleTipo, string> = {
+  betoneira: "bg-purple-100 text-purple-800",
+  veiculo: "bg-slate-100 text-slate-700",
 };
 
 export const PRIORIDADE_LABEL: Record<Prioridade, string> = {
