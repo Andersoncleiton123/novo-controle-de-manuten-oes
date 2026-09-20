@@ -121,7 +121,11 @@ export default async function VeiculosPage({
                 ) : null}
                 {v.local_atual ? <p className="mt-0.5 truncate text-xs text-gray-500">📍 {v.local_atual}</p> : null}
                 {v.observacoes ? (
-                  <p className="mt-1 truncate text-xs italic text-red-600">{v.observacoes}</p>
+                  <Badge className="mt-1 max-w-full overflow-hidden bg-red-100 text-red-700">
+                    <span className="truncate">
+                      {v.observacoes.length > 40 ? `${v.observacoes.slice(0, 40)}…` : v.observacoes}
+                    </span>
+                  </Badge>
                 ) : null}
               </Link>
             </Card>
