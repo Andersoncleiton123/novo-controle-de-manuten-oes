@@ -6,9 +6,15 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { OrderStatusForm } from "@/components/orders/OrderStatusForm";
 import { ItemForm } from "@/components/orders/ItemForm";
-import { DeleteItemButton } from "@/components/orders/DeleteItemButton";
+import { EditableItemRow } from "@/components/orders/EditableItemRow";
 import { OtherCostsForm } from "@/components/orders/OtherCostsForm";
-import { addOrderItem, deleteOrderItem, updateOrderStatus, updateOtherCosts } from "@/app/ordens/actions";
+import {
+  addOrderItem,
+  deleteOrderItem,
+  updateOrderItem,
+  updateOrderStatus,
+  updateOtherCosts,
+} from "@/app/ordens/actions";
 import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
 import { ORDER_STATUS_COLOR, ORDER_STATUS_LABEL, ORDER_TIPO_LABEL, PRIORIDADE_COLOR, PRIORIDADE_LABEL } from "@/lib/labels";
 import type { MaintenanceOrder, MaintenanceOrderItem, Supplier, Vehicle } from "@/lib/types";
@@ -107,16 +113,12 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-2 text-gray-900">{item.descricao}</td>
-                      <td className="px-2 py-2 text-gray-600">{item.quantidade}</td>
-                      <td className="px-2 py-2 text-gray-600">{formatCurrency(item.valor_unitario)}</td>
-                      <td className="px-2 py-2 text-gray-600">{formatCurrency(item.mao_de_obra)}</td>
-                      <td className="px-2 py-2 font-medium text-gray-900">{formatCurrency(item.valor_total)}</td>
-                      <td className="px-2 py-2">
-                        <DeleteItemButton action={deleteOrderItem.bind(null, id, item.id)} />
-                      </td>
-                    </tr>
+                    <EditableItemRow
+                      key={item.id}
+                      item={item}
+                      updateAction={updateOrderItem.bind(null, id, item.id)}
+                      deleteAction={deleteOrderItem.bind(null, id, item.id)}
+                    />
                   ))}
                 </tbody>
               </table>

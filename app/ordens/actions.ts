@@ -180,6 +180,27 @@ export async function addOrderItem(orderId: string, formData: FormData): Promise
   return { id: orderId };
 }
 
+export async function updateOrderItem(orderId: string, itemId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const descricao = str(formData.get("descricao"));
+  if (!descricao) return { error: "Descreva o item." };
+
+  const payload = {
+    descricao,
+    quantidade: num(formData.get("quantidade")) ?? 1,
+    valor_unitario: num(formData.get("valor_unitario")) ?? 0,
+    mao_de_obra: num(formData.get("mao_de_obra")) ?? 0,
+    observacao: str(formData.get("observacao")),
+  };
+
+  const { error } = await supabase.from("maintenance_order_items").update(payload).eq("id", itemId);
+  if (error) return { error: `Não foi possível salvar o item: ${error.message}` };
+
+  revalidatePath(`/ordens/${orderId}`);
+  return { id: orderId };
+}
+
 export async function deleteOrderItem(orderId: string, itemId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("maintenance_order_items").delete().eq("id", itemId);
