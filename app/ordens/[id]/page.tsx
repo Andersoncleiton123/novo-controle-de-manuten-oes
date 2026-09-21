@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { OrderStatusForm } from "@/components/orders/OrderStatusForm";
@@ -42,7 +43,9 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
     .order("created_at", { ascending: true })
     .returns<MaintenanceOrderItem[]>();
 
-  const itemsTotal = (items ?? []).reduce((acc, i) => acc + Number(i.valor_total), 0);
+  const totalPecas = (items ?? []).reduce((acc, i) => acc + Number(i.quantidade) * Number(i.valor_unitario), 0);
+  const totalServico = (items ?? []).reduce((acc, i) => acc + Number(i.mao_de_obra), 0);
+  const itemsTotal = totalPecas + totalServico;
   const totalCost = itemsTotal + Number(order.outros_custos);
 
   const statusAction = updateOrderStatus.bind(null, id);
@@ -131,6 +134,10 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
       <Card>
         <CardBody className="space-y-4">
           <OtherCostsForm defaultValue={order.outros_custos} action={costsAction} />
+          <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
+            <StatCard label="Total em peças" value={formatCurrency(totalPecas)} />
+            <StatCard label="Total em serviço" value={formatCurrency(totalServico)} />
+          </div>
           <div className="flex items-center justify-between border-t border-gray-100 pt-3">
             <span className="text-sm font-medium text-gray-700">Custo total da ordem</span>
             <span className="text-lg font-semibold text-gray-900">{formatCurrency(totalCost)}</span>
