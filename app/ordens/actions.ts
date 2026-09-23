@@ -147,6 +147,23 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
   return { id: orderId };
 }
 
+export async function updateOrderDescription(orderId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const problemaServico = str(formData.get("problema_servico"));
+  if (!problemaServico) return { error: "Descreva o problema ou serviço." };
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({ problema_servico: problemaServico })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível salvar a descrição: ${error.message}` };
+
+  revalidatePath(`/ordens/${orderId}`);
+  revalidatePath("/ordens");
+  return { id: orderId };
+}
+
 export async function updateOtherCosts(orderId: string, formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
   const outrosCustos = num(formData.get("outros_custos")) ?? 0;

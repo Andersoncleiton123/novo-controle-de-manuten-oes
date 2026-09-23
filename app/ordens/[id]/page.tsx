@@ -8,11 +8,13 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { OrderStatusForm } from "@/components/orders/OrderStatusForm";
 import { ItemForm } from "@/components/orders/ItemForm";
 import { EditableItemRow } from "@/components/orders/EditableItemRow";
+import { EditableDescription } from "@/components/orders/EditableDescription";
 import { OtherCostsForm } from "@/components/orders/OtherCostsForm";
 import {
   addOrderItem,
   deleteOrderItem,
   updateOrderItem,
+  updateOrderDescription,
   updateOrderStatus,
   updateOtherCosts,
 } from "@/app/ordens/actions";
@@ -51,6 +53,7 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
   const statusAction = updateOrderStatus.bind(null, id);
   const itemAction = addOrderItem.bind(null, id);
   const costsAction = updateOtherCosts.bind(null, id);
+  const descriptionAction = updateOrderDescription.bind(null, id);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -73,7 +76,7 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
 
       <Card>
         <CardBody>
-          <p className="text-sm text-gray-900">{order.problema_servico}</p>
+          <EditableDescription description={order.problema_servico} action={descriptionAction} />
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500 sm:grid-cols-3">
             <span>Aberta em {formatDate(order.data_abertura)}</span>
             {order.data_prevista ? <span>Prevista para {formatDate(order.data_prevista)}</span> : null}
