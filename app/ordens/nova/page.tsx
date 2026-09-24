@@ -2,23 +2,28 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { OrderForm } from "@/components/orders/OrderForm";
 import { createOrder } from "@/app/ordens/actions";
-import type { CorrectiveIssue, Vehicle } from "@/lib/types";
+import type { CorrectiveIssue, Vehicle, VehicleTipo } from "@/lib/types";
 
 export default async function NovaOrdemPage({
   searchParams,
 }: {
-  searchParams: Promise<{ veiculo?: string; problema?: string; plano?: string }>;
+  searchParams: Promise<{ veiculo?: string; problema?: string; plano?: string; categoria?: string }>;
 }) {
-  const { veiculo, problema, plano } = await searchParams;
+  const { veiculo, problema, plano, categoria } = await searchParams;
   const supabase = await createClient();
 
+  let vehiclesQuery = supabase
+    .from("vehicles")
+    .select("id, nome, identificador, numero_interno")
+    .neq("status", "desmobilizado")
+    .order("numero_interno");
+  // Abertura pelo atalho Betoneiras/Caminhões: lista só os veículos daquela categoria.
+  if (categoria === "betoneira" || categoria === "veiculo") {
+    vehiclesQuery = vehiclesQuery.eq("tipo", categoria as VehicleTipo);
+  }
+
   const [{ data: vehicles }, issueResult] = await Promise.all([
-    supabase
-      .from("vehicles")
-      .select("id, nome, identificador, numero_interno")
-      .neq("status", "desmobilizado")
-      .order("numero_interno")
-      .returns<Pick<Vehicle, "id" | "nome" | "identificador" | "numero_interno">[]>(),
+    vehiclesQuery.returns<Pick<Vehicle, "id" | "nome" | "identificador" | "numero_interno">[]>(),
     problema
       ? supabase.from("corrective_issues").select("*").eq("id", problema).single<CorrectiveIssue>()
       : Promise.resolve({ data: null }),
@@ -29,7 +34,13 @@ export default async function NovaOrdemPage({
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Nova ordem de manutenção</h1>
+        <h1 className="text-xl font-semibold text-gray-900">
+          {categoria === "betoneira"
+            ? "Nova ordem de manutenção — Betoneira"
+            : categoria === "veiculo"
+              ? "Nova ordem de manutenção — Caminhão"
+              : "Nova ordem de manutenção"}
+        </h1>
         <p className="text-sm text-gray-500">Preventiva ou corretiva.</p>
       </div>
       <Card>

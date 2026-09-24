@@ -66,7 +66,19 @@ export default async function VeiculosPage({
           <h1 className="text-xl font-semibold text-gray-900">{titulo}</h1>
           <p className="text-sm text-gray-500">Frota da Unic Car.</p>
         </div>
-        <LinkButton href={tipo ? `/veiculos/novo?tipo=${tipo}` : "/veiculos/novo"}>{novoLabel}</LinkButton>
+        <div className="flex flex-wrap gap-2">
+          {tipo === "betoneira" || tipo === "veiculo" ? (
+            <>
+              <LinkButton href={`/ordens?categoria=${tipo}`} variant="secondary">
+                {tipo === "betoneira" ? "Ordens das betoneiras" : "Ordens dos caminhões"}
+              </LinkButton>
+              <LinkButton href={`/ordens/nova?categoria=${tipo}`} variant="secondary">
+                + Abrir ordem de serviço
+              </LinkButton>
+            </>
+          ) : null}
+          <LinkButton href={tipo ? `/veiculos/novo?tipo=${tipo}` : "/veiculos/novo"}>{novoLabel}</LinkButton>
+        </div>
       </div>
 
       <Card className="p-4">
