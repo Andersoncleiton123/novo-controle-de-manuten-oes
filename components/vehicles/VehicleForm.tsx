@@ -47,7 +47,7 @@ export function VehicleForm({
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FieldGroup label="Categoria" htmlFor="tipo" required hint="Só a betoneira entra na frota de locação">
+        <FieldGroup label="Categoria" htmlFor="tipo" required>
           <Select id="tipo" name="tipo" defaultValue={defaultValues?.tipo ?? "betoneira"}>
             {Object.entries(VEHICLE_TIPO_LABEL).map(([value, label]) => (
               <option key={value} value={value}>

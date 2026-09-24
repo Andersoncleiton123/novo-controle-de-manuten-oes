@@ -56,14 +56,17 @@ export default async function VeiculosPage({
     }
   }
 
+  const titulo = tipo === "betoneira" ? "Betoneiras" : tipo === "veiculo" ? "Caminhões" : "Veículos";
+  const novoLabel = tipo === "betoneira" ? "+ Nova betoneira" : tipo === "veiculo" ? "+ Novo caminhão" : "+ Novo veículo";
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Veículos</h1>
-          <p className="text-sm text-gray-500">Frota de caminhões betoneira da Unic Car.</p>
+          <h1 className="text-xl font-semibold text-gray-900">{titulo}</h1>
+          <p className="text-sm text-gray-500">Frota da Unic Car.</p>
         </div>
-        <LinkButton href="/veiculos/novo">+ Novo veículo</LinkButton>
+        <LinkButton href={tipo ? `/veiculos/novo?tipo=${tipo}` : "/veiculos/novo"}>{novoLabel}</LinkButton>
       </div>
 
       <Card className="p-4">

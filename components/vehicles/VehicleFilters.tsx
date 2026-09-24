@@ -34,7 +34,7 @@ export function VehicleFilters({
         className="sm:w-48"
         onChange={() => formRef.current?.requestSubmit()}
       >
-        <option value="">Betoneira e veículo</option>
+        <option value="">Todas as categorias</option>
         {Object.entries(VEHICLE_TIPO_LABEL).map(([value, label]) => (
           <option key={value} value={value}>
             {label}
