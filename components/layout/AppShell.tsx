@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import {
   LayoutDashboard,
   Truck,
@@ -31,13 +31,35 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Settings,
 };
 
+function isActive(href: string, pathname: string, search: URLSearchParams | null) {
+  if (href === "/") return pathname === "/";
+  const [path, query] = href.split("?");
+  if (!pathname.startsWith(path)) return false;
+  if (!query || !search) return true;
+  // Atalhos com filtro (ex.: Betoneiras / Caminhões) só ficam ativos quando o filtro bate.
+  return Array.from(new URLSearchParams(query)).every(([k, v]) => search.get(k) === v);
+}
+
+function NavLinksWithSearch({ onNavigate }: { onNavigate?: () => void }) {
+  const searchParams = useSearchParams();
+  return <NavLinksBase onNavigate={onNavigate} search={searchParams} />;
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <Suspense fallback={<NavLinksBase onNavigate={onNavigate} search={null} />}>
+      <NavLinksWithSearch onNavigate={onNavigate} />
+    </Suspense>
+  );
+}
+
+function NavLinksBase({ onNavigate, search }: { onNavigate?: () => void; search: URLSearchParams | null }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
       {NAV_ITEMS.map((item) => {
         const Icon = ICONS[item.icon];
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const active = isActive(item.href, pathname, search);
         return (
           <Link
             key={item.href}

@@ -26,7 +26,7 @@ export const VEHICLE_STATUS_COLOR: Record<VehicleStatus, string> = {
 
 export const VEHICLE_TIPO_LABEL: Record<VehicleTipo, string> = {
   betoneira: "Betoneira",
-  veiculo: "Veículo",
+  veiculo: "Caminhão",
 };
 
 export const VEHICLE_TIPO_COLOR: Record<VehicleTipo, string> = {

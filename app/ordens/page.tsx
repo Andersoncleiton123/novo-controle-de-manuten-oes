@@ -6,8 +6,15 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Field";
 import { formatDate } from "@/lib/format";
-import { ORDER_STATUS_COLOR, ORDER_STATUS_LABEL, ORDER_TIPO_LABEL, PRIORIDADE_COLOR, PRIORIDADE_LABEL } from "@/lib/labels";
-import type { MaintenanceOrder, OrderStatus, OrderTipo, Vehicle } from "@/lib/types";
+import {
+  ORDER_STATUS_COLOR,
+  ORDER_STATUS_LABEL,
+  ORDER_TIPO_LABEL,
+  PRIORIDADE_COLOR,
+  PRIORIDADE_LABEL,
+  VEHICLE_TIPO_LABEL,
+} from "@/lib/labels";
+import type { MaintenanceOrder, OrderStatus, OrderTipo, Vehicle, VehicleTipo } from "@/lib/types";
 
 export const revalidate = 0;
 
@@ -16,18 +23,32 @@ type OrderWithVehicle = MaintenanceOrder & { vehicles: Pick<Vehicle, "nome" | "i
 export default async function OrdensPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; tipo?: string }>;
+  searchParams: Promise<{ status?: string; tipo?: string; categoria?: string }>;
 }) {
-  const { status, tipo } = await searchParams;
+  const { status, tipo, categoria: categoriaParam } = await searchParams;
+  const categoria = categoriaParam === "betoneira" || categoriaParam === "veiculo" ? categoriaParam : undefined;
   const supabase = await createClient();
 
+  // Com categoria, o join vira inner para trazer só as OS de betoneiras (ou só de caminhões).
   let query = supabase
     .from("maintenance_orders")
-    .select("*, vehicles(nome, identificador, numero_interno)")
+    .select(
+      categoria
+        ? "*, vehicles!inner(nome, identificador, numero_interno, tipo)"
+        : "*, vehicles(nome, identificador, numero_interno, tipo)",
+    )
     .order("data_abertura", { ascending: false });
 
   if (status) query = query.eq("status", status as OrderStatus);
   if (tipo) query = query.eq("tipo", tipo as OrderTipo);
+  if (categoria) query = query.eq("vehicles.tipo", categoria as VehicleTipo);
+
+  const titulo =
+    categoria === "betoneira"
+      ? "Ordens de manutenção — Betoneiras"
+      : categoria === "veiculo"
+        ? "Ordens de manutenção — Caminhões"
+        : "Ordens de manutenção";
 
   const { data: orders } = await query.returns<OrderWithVehicle[]>();
 
@@ -35,10 +56,10 @@ export default async function OrdensPage({
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Ordens de manutenção</h1>
+          <h1 className="text-xl font-semibold text-gray-900">{titulo}</h1>
           <p className="text-sm text-gray-500">Preventivas e corretivas.</p>
         </div>
-        <LinkButton href="/ordens/nova">+ Nova ordem</LinkButton>
+        <LinkButton href={categoria ? `/ordens/nova?categoria=${categoria}` : "/ordens/nova"}>+ Nova ordem</LinkButton>
       </div>
 
       <Card className="p-4">
@@ -46,6 +67,14 @@ export default async function OrdensPage({
           <Select name="status" defaultValue={status ?? ""} className="sm:w-56">
             <option value="">Todos os status</option>
             {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <Select name="categoria" defaultValue={categoria ?? ""} className="sm:w-56">
+            <option value="">Todas as categorias</option>
+            {Object.entries(VEHICLE_TIPO_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

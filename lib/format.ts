@@ -31,6 +31,17 @@ export function formatHoras(value: number | null | undefined): string {
   return `${Math.round(value).toLocaleString("pt-BR")} h`;
 }
 
+// Rótulo de veículo para seletores: "BT 01 - Convicta" (betoneira) ou "SDT-5F07 — Caminhão da BT 01" (caminhão).
+export function vehicleOptionLabel(v: {
+  numero_interno: string | null;
+  nome: string | null;
+  identificador: string;
+}): string {
+  const principal = v.numero_interno ?? v.identificador;
+  const detalhe = v.nome && v.nome !== principal ? v.nome : null;
+  return detalhe ? `${principal} — ${detalhe}` : principal;
+}
+
 export function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   return value.toLocaleString("pt-BR");

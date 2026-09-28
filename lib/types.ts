@@ -44,6 +44,8 @@ export type Vehicle = {
   contrato_fim: string | null;
   status: VehicleStatus;
   observacoes: string | null;
+  // Betoneira: caminhão em que o equipamento está montado.
+  caminhao_id: string | null;
   created_at: string;
   updated_at: string;
 };

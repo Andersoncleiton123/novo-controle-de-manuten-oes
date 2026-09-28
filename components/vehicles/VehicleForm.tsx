@@ -14,14 +14,18 @@ export function VehicleForm({
   defaultValues,
   submitLabel = "Salvar",
   showReadings = false,
+  caminhoes = [],
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   defaultValues?: Partial<Vehicle>;
   submitLabel?: string;
   showReadings?: boolean;
+  caminhoes?: Pick<Vehicle, "id" | "identificador" | "nome">[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [tipo, setTipo] = useState(defaultValues?.tipo ?? "betoneira");
+  const isBetoneira = tipo === "betoneira";
   const [pending, startTransition] = useTransition();
 
   return (
@@ -47,8 +51,8 @@ export function VehicleForm({
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FieldGroup label="Categoria" htmlFor="tipo" required hint="Só a betoneira entra na frota de locação">
-          <Select id="tipo" name="tipo" defaultValue={defaultValues?.tipo ?? "betoneira"}>
+        <FieldGroup label="Categoria" htmlFor="tipo" required>
+          <Select id="tipo" name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value as Vehicle["tipo"])}>
             {Object.entries(VEHICLE_TIPO_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -59,15 +63,33 @@ export function VehicleForm({
         <FieldGroup label="Número interno" htmlFor="numero_interno" hint='Ex: "BT 13"'>
           <Input id="numero_interno" name="numero_interno" defaultValue={defaultValues?.numero_interno ?? ""} />
         </FieldGroup>
-        <FieldGroup label="Placa" htmlFor="identificador" required>
+        <FieldGroup
+          label={isBetoneira ? "Identificação / nº de série" : "Placa"}
+          htmlFor="identificador"
+          required
+          hint={isBetoneira ? 'Ex: "BT 14" ou o número de série do equipamento' : undefined}
+        >
           <Input
             id="identificador"
             name="identificador"
             required
             defaultValue={defaultValues?.identificador ?? ""}
-            placeholder="ABC-1D23"
+            placeholder={isBetoneira ? "BT 14" : "ABC1D23"}
           />
         </FieldGroup>
+        {isBetoneira ? (
+          <FieldGroup label="Montada no caminhão" htmlFor="caminhao_id" hint="Km e horímetro vêm do caminhão">
+            <Select id="caminhao_id" name="caminhao_id" defaultValue={defaultValues?.caminhao_id ?? ""}>
+              <option value="">Nenhum</option>
+              {caminhoes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.identificador}
+                  {c.nome ? ` — ${c.nome}` : ""}
+                </option>
+              ))}
+            </Select>
+          </FieldGroup>
+        ) : null}
         <FieldGroup label="Nome / apelido" htmlFor="nome" hint='Ex: "BT 13 - Convicta"'>
           <Input id="nome" name="nome" defaultValue={defaultValues?.nome ?? ""} />
         </FieldGroup>

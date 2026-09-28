@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
 import {
@@ -45,8 +46,9 @@ export default async function DashboardPage() {
     supabase
       .from("vehicles")
       .select("id, numero_interno, identificador, nome, status, cliente_atual, local_atual")
+      .eq("tipo", "veiculo")
       .neq("status", "desmobilizado")
-      .order("numero_interno")
+      .order("nome")
       .returns<Pick<Vehicle, "id" | "numero_interno" | "identificador" | "nome" | "status" | "cliente_atual" | "local_atual">[]>(),
   ]);
 
@@ -142,10 +144,12 @@ export default async function DashboardPage() {
                     <div className="flex items-center justify-between gap-3">
                       <Link
                         href={`/veiculos/${p.vehicle_id}`}
-                        className="truncate text-sm font-medium text-gray-900 hover:text-brand-700"
+                        className="flex min-w-0 items-center gap-2 text-sm font-medium text-gray-900 hover:text-brand-700"
                       >
-                        {p.vehicle_nome ?? p.vehicle_numero_interno ?? p.vehicle_placa}{" "}
-                        <span className="font-normal text-gray-400">({p.vehicle_placa})</span> · {p.plano_nome}
+                        <PlacaMercosul placa={p.vehicle_placa} />
+                        <span className="truncate">
+                          {p.vehicle_numero_interno ?? p.vehicle_nome} · {p.plano_nome}
+                        </span>
                       </Link>
                       <Badge className={NIVEL_ALERTA_COLOR[p.nivel_alerta]}>
                         {NIVEL_ALERTA_LABEL[p.nivel_alerta]}
@@ -176,19 +180,16 @@ export default async function DashboardPage() {
             <ul className="divide-y divide-gray-100">
               {fleetVehicles.map((v) => (
                 <li key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/veiculos/${v.id}`}
-                      className="truncate text-sm font-medium text-gray-900 hover:text-brand-700"
-                    >
-                      {v.numero_interno ?? v.nome ?? v.identificador}{" "}
-                      <span className="font-normal text-gray-400">({v.identificador})</span>
-                    </Link>
-                    <p className="truncate text-xs text-gray-500">
-                      {v.cliente_atual ?? "Sem cliente informado"}
-                      {v.local_atual ? ` · ${v.local_atual}` : ""}
-                    </p>
-                  </div>
+                  <Link href={`/veiculos/${v.id}`} className="flex min-w-0 items-center gap-3 hover:text-brand-700">
+                    <PlacaMercosul placa={v.identificador} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900">{v.numero_interno ?? v.nome}</p>
+                      <p className="truncate text-xs text-gray-500">
+                        {v.cliente_atual ?? "Sem cliente informado"}
+                        {v.local_atual ? ` · ${v.local_atual}` : ""}
+                      </p>
+                    </div>
+                  </Link>
                   <Badge className={VEHICLE_STATUS_COLOR[v.status]}>{VEHICLE_STATUS_LABEL[v.status]}</Badge>
                 </li>
               ))}
