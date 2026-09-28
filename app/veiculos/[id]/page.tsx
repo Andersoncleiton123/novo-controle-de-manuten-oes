@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
+import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
 import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
 import {
   CATEGORIA_HISTORICO_LABEL,
@@ -39,6 +40,16 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
 
   const { data: vehicle } = await supabase.from("vehicles").select("*").eq("id", id).single<Vehicle>();
   if (!vehicle) notFound();
+
+  // Betoneira aponta para o caminhão em que está montada; caminhão busca a betoneira que carrega.
+  const { data: vinculado } =
+    vehicle.tipo === "betoneira"
+      ? vehicle.caminhao_id
+        ? await supabase.from("vehicles").select("*").eq("id", vehicle.caminhao_id).maybeSingle<Vehicle>()
+        : { data: null }
+      : await supabase.from("vehicles").select("*").eq("caminhao_id", id).maybeSingle<Vehicle>();
+  const caminhao = vehicle.tipo === "betoneira" ? vinculado : null;
+  const leituras = caminhao ?? vehicle;
 
   const [{ data: planStatus }, { data: issues }, { data: orders }, { data: history }, { data: measurements }] =
     await Promise.all([
@@ -122,8 +133,8 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <LinkButton href={`/veiculos/${id}/medicao`} variant="secondary" size="sm">
-            Atualizar medição
+          <LinkButton href={`/veiculos/${caminhao?.id ?? id}/medicao`} variant="secondary" size="sm">
+            {caminhao ? "Atualizar medição do caminhão" : "Atualizar medição"}
           </LinkButton>
           <LinkButton href={`/problemas/novo?veiculo=${id}`} variant="secondary" size="sm">
             Registrar problema
@@ -137,6 +148,27 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      {vinculado ? (
+        <Link
+          href={`/veiculos/${vinculado.id}`}
+          className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          {vehicle.tipo === "betoneira" ? (
+            <>
+              <span>Montada no caminhão</span>
+              <PlacaMercosul placa={vinculado.identificador} />
+              <span className="text-gray-500">{vinculado.nome}</span>
+            </>
+          ) : (
+            <>
+              <span>Betoneira montada:</span>
+              <span className="font-medium text-gray-900">{vinculado.numero_interno ?? vinculado.identificador}</span>
+              <span className="text-gray-500">{vinculado.marca}</span>
+            </>
+          )}
+        </Link>
+      ) : null}
+
       {vehicle.observacoes ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {vehicle.observacoes}
@@ -144,9 +176,12 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Placa" value={vehicle.identificador} />
-        <StatCard label="KM atual" value={formatKm(vehicle.km_atual)} />
-        <StatCard label="Horímetro atual" value={formatHoras(vehicle.horimetro_atual)} />
+        <StatCard label={vehicle.tipo === "betoneira" ? "Identificação" : "Placa"} value={vehicle.identificador} />
+        <StatCard label={caminhao ? "KM do caminhão" : "KM atual"} value={formatKm(leituras.km_atual)} />
+        <StatCard
+          label={caminhao ? "Horímetro do caminhão" : "Horímetro atual"}
+          value={formatHoras(leituras.horimetro_atual)}
+        />
         <StatCard label="Cliente atual" value={vehicle.cliente_atual ?? "—"} />
         <StatCard label="Local onde está locado" value={vehicle.local_atual ?? "—"} />
         <StatCard label="Início do contrato" value={formatDate(vehicle.contrato_inicio)} />

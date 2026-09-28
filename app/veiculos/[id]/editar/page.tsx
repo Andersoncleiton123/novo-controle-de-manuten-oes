@@ -9,7 +9,15 @@ import type { Vehicle } from "@/lib/types";
 export default async function EditarVeiculoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: vehicle } = await supabase.from("vehicles").select("*").eq("id", id).single<Vehicle>();
+  const [{ data: vehicle }, { data: caminhoes }] = await Promise.all([
+    supabase.from("vehicles").select("*").eq("id", id).single<Vehicle>(),
+    supabase
+      .from("vehicles")
+      .select("id, identificador, nome")
+      .eq("tipo", "veiculo")
+      .order("nome")
+      .returns<Pick<Vehicle, "id" | "identificador" | "nome">[]>(),
+  ]);
 
   if (!vehicle) notFound();
 
@@ -26,7 +34,12 @@ export default async function EditarVeiculoPage({ params }: { params: Promise<{ 
       <Card>
         <CardHeader title="Dados do veículo" />
         <CardBody>
-          <VehicleForm action={action} defaultValues={vehicle} submitLabel="Salvar alterações" />
+          <VehicleForm
+            action={action}
+            defaultValues={vehicle}
+            submitLabel="Salvar alterações"
+            caminhoes={caminhoes ?? []}
+          />
         </CardBody>
       </Card>
       <Card>

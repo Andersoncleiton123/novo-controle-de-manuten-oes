@@ -1,11 +1,20 @@
+import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { VehicleForm } from "@/components/vehicles/VehicleForm";
 import { createVehicle } from "@/app/veiculos/actions";
-import type { VehicleTipo } from "@/lib/types";
+import type { Vehicle, VehicleTipo } from "@/lib/types";
 
 export default async function NovoVeiculoPage({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
   const { tipo } = await searchParams;
   const defaultTipo: VehicleTipo = tipo === "veiculo" ? "veiculo" : "betoneira";
+  const supabase = await createClient();
+  const { data: caminhoes } = await supabase
+    .from("vehicles")
+    .select("id, identificador, nome")
+    .eq("tipo", "veiculo")
+    .order("nome")
+    .returns<Pick<Vehicle, "id" | "identificador" | "nome">[]>();
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
@@ -15,7 +24,13 @@ export default async function NovoVeiculoPage({ searchParams }: { searchParams: 
       <Card>
         <CardHeader title="Dados do veículo" />
         <CardBody>
-          <VehicleForm action={createVehicle} defaultValues={{ tipo: defaultTipo }} submitLabel="Cadastrar veículo" showReadings />
+          <VehicleForm
+            action={createVehicle}
+            defaultValues={{ tipo: defaultTipo }}
+            submitLabel="Cadastrar veículo"
+            showReadings
+            caminhoes={caminhoes ?? []}
+          />
         </CardBody>
       </Card>
     </div>

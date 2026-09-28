@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { PRIORIDADE_LABEL } from "@/lib/labels";
-import { todayISO } from "@/lib/format";
+import { todayISO, vehicleOptionLabel } from "@/lib/format";
 import type { Vehicle } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -51,7 +51,7 @@ export function IssueForm({
             </option>
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>
-                {v.numero_interno ?? v.identificador} — {v.nome ?? v.identificador}
+                {vehicleOptionLabel(v)}
               </option>
             ))}
           </Select>

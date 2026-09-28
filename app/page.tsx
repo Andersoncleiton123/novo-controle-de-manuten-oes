@@ -46,8 +46,9 @@ export default async function DashboardPage() {
     supabase
       .from("vehicles")
       .select("id, numero_interno, identificador, nome, status, cliente_atual, local_atual")
+      .eq("tipo", "veiculo")
       .neq("status", "desmobilizado")
-      .order("numero_interno")
+      .order("nome")
       .returns<Pick<Vehicle, "id" | "numero_interno" | "identificador" | "nome" | "status" | "cliente_atual" | "local_atual">[]>(),
   ]);
 

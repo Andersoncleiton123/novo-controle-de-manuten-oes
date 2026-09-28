@@ -5,7 +5,25 @@ export function formatPlaca(placa: string) {
   return placa.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+// Placa brasileira: 3 letras + 4 caracteres (padrão antigo ABC1234 ou Mercosul ABC1D23).
+export function isPlaca(valor: string) {
+  return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(formatPlaca(valor));
+}
+
 export function PlacaMercosul({ placa, className }: { placa: string; className?: string }) {
+  // Identificação que não é placa (ex.: betoneira "BT 01") aparece como selo simples.
+  if (!isPlaca(placa)) {
+    return (
+      <span
+        className={cn(
+          "inline-flex w-[5.25rem] shrink-0 items-center justify-center rounded-[3px] border border-gray-300 bg-gray-50 py-1 text-xs font-semibold text-gray-700",
+          className,
+        )}
+      >
+        {placa}
+      </span>
+    );
+  }
   return (
     <span
       className={cn(

@@ -18,6 +18,11 @@ function num(v: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+// Só betoneira fica vinculada a um caminhão.
+function caminhaoId(formData: FormData): string | null {
+  return str(formData.get("tipo")) === "veiculo" ? null : str(formData.get("caminhao_id"));
+}
+
 export async function createVehicle(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
 
@@ -38,6 +43,7 @@ export async function createVehicle(formData: FormData): Promise<ActionResult> {
     contrato_fim: str(formData.get("contrato_fim")),
     status: (str(formData.get("status")) ?? "disponivel") as VehicleStatus,
     observacoes: str(formData.get("observacoes")),
+    caminhao_id: caminhaoId(formData),
   };
 
   const { data, error } = await supabase.from("vehicles").insert(payload).select("id").single();
@@ -69,6 +75,7 @@ export async function updateVehicle(vehicleId: string, formData: FormData): Prom
     contrato_fim: str(formData.get("contrato_fim")),
     status: (str(formData.get("status")) ?? "disponivel") as VehicleStatus,
     observacoes: str(formData.get("observacoes")),
+    caminhao_id: caminhaoId(formData),
   };
 
   const { error } = await supabase.from("vehicles").update(payload).eq("id", vehicleId);

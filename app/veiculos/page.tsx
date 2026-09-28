@@ -6,6 +6,7 @@ import { LinkButton } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { VehicleFilters } from "@/components/vehicles/VehicleFilters";
+import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
 import {
   NIVEL_ALERTA_COLOR,
   NIVEL_ALERTA_LABEL,
@@ -29,7 +30,11 @@ export default async function VeiculosPage({
   const { q, status, tipo } = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase.from("vehicles").select("*").order("numero_interno", { ascending: true });
+  let query = supabase
+    .from("vehicles")
+    .select("*")
+    .order("numero_interno", { ascending: true })
+    .order("nome", { ascending: true });
 
   if (status) {
     query = query.eq("status", status as VehicleStatus);
@@ -43,10 +48,20 @@ export default async function VeiculosPage({
     );
   }
 
-  const [{ data: vehicles }, { data: planStatus }] = await Promise.all([
+  const [{ data: vehicles }, { data: planStatus }, { data: allVehicles }] = await Promise.all([
     query.returns<Vehicle[]>(),
     supabase.from("v_vehicle_plan_status").select("*").returns<VehiclePlanStatus[]>(),
+    supabase
+      .from("vehicles")
+      .select("id, identificador, numero_interno, km_atual, horimetro_atual, caminhao_id")
+      .returns<Pick<Vehicle, "id" | "identificador" | "numero_interno" | "km_atual" | "horimetro_atual" | "caminhao_id">[]>(),
   ]);
+
+  // Vínculo betoneira ↔ caminhão para mostrar a placa/leituras do caminhão na betoneira e vice-versa.
+  const byId = new Map((allVehicles ?? []).map((v) => [v.id, v]));
+  const betoneiraDoCaminhao = new Map(
+    (allVehicles ?? []).filter((v) => v.caminhao_id).map((v) => [v.caminhao_id as string, v]),
+  );
 
   const worstPlanByVehicle = new Map<string, VehiclePlanStatus>();
   for (const p of planStatus ?? []) {
@@ -91,6 +106,9 @@ export default async function VeiculosPage({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {vehicles.map((v) => {
             const plan = worstPlanByVehicle.get(v.id);
+            const caminhao = v.caminhao_id ? byId.get(v.caminhao_id) : undefined;
+            const betoneira = betoneiraDoCaminhao.get(v.id);
+            const leituras = caminhao ?? v;
             return (
             <Card key={v.id} className="h-full p-4 transition-shadow hover:shadow-md">
               <div className="flex items-start justify-between gap-2">
@@ -115,11 +133,15 @@ export default async function VeiculosPage({
                 </div>
               </div>
               <Link href={`/veiculos/${v.id}`} className="mt-3 block">
-                <div className="flex items-center justify-between text-xs text-gray-600">
-                  <span>{v.identificador}</span>
-                  <span>{formatKm(v.km_atual)}</span>
-                  <span>{formatHoras(v.horimetro_atual)}</span>
+                <div className="flex items-center justify-between gap-2 text-xs text-gray-600">
+                  <PlacaMercosul placa={caminhao?.identificador ?? v.identificador} />
+                  <span>{formatKm(leituras.km_atual)}</span>
+                  <span>{formatHoras(leituras.horimetro_atual)}</span>
                 </div>
+                {caminhao ? <p className="mt-1 text-xs text-gray-500">Montada no caminhão {caminhao.identificador}</p> : null}
+                {betoneira ? (
+                  <p className="mt-1 text-xs text-gray-500">Betoneira montada: {betoneira.numero_interno ?? betoneira.identificador}</p>
+                ) : null}
                 {v.cliente_atual ? (
                   <p className="mt-1 truncate text-xs font-medium text-gray-700">{v.cliente_atual}</p>
                 ) : null}
