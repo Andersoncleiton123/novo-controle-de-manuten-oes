@@ -6,13 +6,17 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { OrderStatusForm } from "@/components/orders/OrderStatusForm";
+import { CloseOrderForm } from "@/components/orders/CloseOrderForm";
+import { ReopenOrderForm } from "@/components/orders/ReopenOrderForm";
 import { ItemForm } from "@/components/orders/ItemForm";
 import { EditableItemRow } from "@/components/orders/EditableItemRow";
 import { EditableDescription } from "@/components/orders/EditableDescription";
 import { OtherCostsForm } from "@/components/orders/OtherCostsForm";
 import {
   addOrderItem,
+  closeOrder,
   deleteOrderItem,
+  reopenOrder,
   updateOrderItem,
   updateOrderDescription,
   updateOrderStatus,
@@ -44,6 +48,16 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
     .eq("order_id", id)
     .order("created_at", { ascending: true })
     .returns<MaintenanceOrderItem[]>();
+
+  const { data: planos } = await supabase
+    .from("vehicle_maintenance_plans")
+    .select("id, maintenance_plans!inner(nome, ativo)")
+    .eq("vehicle_id", order.vehicle_id)
+    .eq("ativo", true)
+    .eq("maintenance_plans.ativo", true)
+    .returns<{ id: string; maintenance_plans: { nome: string; ativo: boolean } }[]>();
+
+  const encerrada = order.status === "concluida" || order.status === "cancelada";
 
   const totalPecas = (items ?? []).reduce((acc, i) => acc + Number(i.quantidade) * Number(i.valor_unitario), 0);
   const totalServico = (items ?? []).reduce((acc, i) => acc + Number(i.mao_de_obra), 0);
@@ -93,7 +107,30 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
       <Card>
         <CardHeader title="Status da ordem" />
         <CardBody>
-          <OrderStatusForm currentStatus={order.status} dataPrevista={order.data_prevista} action={statusAction} />
+          {encerrada ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                {order.status === "concluida"
+                  ? `Ordem fechada em ${formatDate(order.data_conclusao)}.`
+                  : "Ordem cancelada."}{" "}
+                Alterações de status exigem reabertura pelo administrador.
+              </p>
+              <ReopenOrderForm action={reopenOrder.bind(null, id)} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <OrderStatusForm currentStatus={order.status} dataPrevista={order.data_prevista} action={statusAction} />
+              <div className="border-t border-gray-100 pt-4">
+                <CloseOrderForm
+                  km={order.km}
+                  horas={order.horas}
+                  planos={(planos ?? []).map((p) => ({ id: p.id, nome: p.maintenance_plans.nome }))}
+                  planoAtualId={order.vehicle_maintenance_plan_id}
+                  action={closeOrder.bind(null, id)}
+                />
+              </div>
+            </div>
+          )}
         </CardBody>
       </Card>
 
