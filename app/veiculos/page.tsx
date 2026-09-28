@@ -43,8 +43,10 @@ export default async function VeiculosPage({
     query = query.eq("tipo", tipo as VehicleTipo);
   }
   if (q) {
+    // Placas são gravadas sem hífen; "RGK-1F44" também encontra RGK1F44.
+    const placa = q.replace(/-/g, "");
     query = query.or(
-      `nome.ilike.%${q}%,identificador.ilike.%${q}%,numero_interno.ilike.%${q}%,marca.ilike.%${q}%,modelo.ilike.%${q}%`,
+      `nome.ilike.%${q}%,identificador.ilike.%${q}%,identificador.ilike.%${placa}%,numero_interno.ilike.%${q}%,marca.ilike.%${q}%,modelo.ilike.%${q}%`,
     );
   }
 

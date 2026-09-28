@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { formatPlaca, isPlacaMercosul } from "@/components/ui/PlacaMercosul";
 import type { VehicleStatus, VehicleTipo } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -23,12 +24,28 @@ function caminhaoId(formData: FormData): string | null {
   return str(formData.get("tipo")) === "veiculo" ? null : str(formData.get("caminhao_id"));
 }
 
+// Caminhão é identificado pela placa, gravada no padrão Mercosul sem hífen (ex.: RHD5H12).
+function identificador(formData: FormData): { valor: string; error?: string } {
+  const valor = str(formData.get("identificador")) ?? "";
+  if (str(formData.get("tipo")) !== "veiculo") return { valor };
+  if (!isPlacaMercosul(valor)) {
+    return {
+      valor,
+      error: "Placa inválida. Use o padrão Mercosul: 3 letras, 1 número, 1 letra e 2 números (ex.: RHD5H12).",
+    };
+  }
+  return { valor: formatPlaca(valor) };
+}
+
 export async function createVehicle(formData: FormData): Promise<ActionResult> {
+  const placa = identificador(formData);
+  if (placa.error) return { error: placa.error };
+
   const supabase = await createClient();
 
   const payload = {
     tipo: (str(formData.get("tipo")) ?? "betoneira") as VehicleTipo,
-    identificador: str(formData.get("identificador")) ?? "",
+    identificador: placa.valor,
     nome: str(formData.get("nome")),
     numero_interno: str(formData.get("numero_interno")),
     marca: str(formData.get("marca")),
@@ -58,11 +75,14 @@ export async function createVehicle(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateVehicle(vehicleId: string, formData: FormData): Promise<ActionResult> {
+  const placa = identificador(formData);
+  if (placa.error) return { error: placa.error };
+
   const supabase = await createClient();
 
   const payload = {
     tipo: (str(formData.get("tipo")) ?? "betoneira") as VehicleTipo,
-    identificador: str(formData.get("identificador")) ?? "",
+    identificador: placa.valor,
     nome: str(formData.get("nome")),
     numero_interno: str(formData.get("numero_interno")),
     marca: str(formData.get("marca")),
@@ -105,6 +125,9 @@ export async function deleteVehicle(vehicleId: string): Promise<ActionResult> {
 }
 
 export async function createMeasurement(vehicleId: string, formData: FormData): Promise<ActionResult> {
+  const placa = identificador(formData);
+  if (placa.error) return { error: placa.error };
+
   const supabase = await createClient();
 
   const payload = {

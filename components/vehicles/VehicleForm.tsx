@@ -67,14 +67,30 @@ export function VehicleForm({
           label={isBetoneira ? "Identificação / nº de série" : "Placa"}
           htmlFor="identificador"
           required
-          hint={isBetoneira ? 'Ex: "BT 14" ou o número de série do equipamento' : undefined}
+          hint={
+            isBetoneira
+              ? 'Ex: "BT 14" ou o número de série do equipamento'
+              : "Padrão Mercosul: 3 letras, 1 número, 1 letra e 2 números, sem hífen"
+          }
         >
           <Input
+            key={isBetoneira ? "identificacao" : "placa"}
             id="identificador"
             name="identificador"
             required
             defaultValue={defaultValues?.identificador ?? ""}
-            placeholder={isBetoneira ? "BT 14" : "ABC1D23"}
+            placeholder={isBetoneira ? "BT 14" : "RHD5H12"}
+            {...(isBetoneira
+              ? {}
+              : {
+                  maxLength: 8,
+                  pattern: "[A-Za-z]{3}-?[0-9][A-Za-z][0-9]{2}",
+                  title: "Placa Mercosul, ex.: RHD5H12",
+                  className: "font-mono uppercase",
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                    e.currentTarget.value = e.currentTarget.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+                  },
+                })}
           />
         </FieldGroup>
         {isBetoneira ? (

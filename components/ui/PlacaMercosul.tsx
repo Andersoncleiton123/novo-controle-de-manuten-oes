@@ -10,6 +10,11 @@ export function isPlaca(valor: string) {
   return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(formatPlaca(valor));
 }
 
+// Padrão Mercosul: 3 letras, 1 número, 1 letra, 2 números (ex.: RHD5H12).
+export function isPlacaMercosul(valor: string) {
+  return /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(formatPlaca(valor));
+}
+
 export function PlacaMercosul({ placa, className }: { placa: string; className?: string }) {
   // Identificação que não é placa (ex.: betoneira "BT 01") aparece como selo simples.
   if (!isPlaca(placa)) {
