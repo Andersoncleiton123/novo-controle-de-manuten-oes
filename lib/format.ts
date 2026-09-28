@@ -42,6 +42,16 @@ export function vehicleOptionLabel(v: {
   return detalhe ? `${principal} — ${detalhe}` : principal;
 }
 
+// Saldo até a próxima manutenção; vencida aparece como "atrasada há 710 h" em vez de valor negativo.
+export function formatRestante(
+  valor: number,
+  formatar: (v: number) => string,
+  emDia: (texto: string) => string,
+): string {
+  if (valor > 0) return emDia(formatar(valor));
+  return valor < 0 ? `atrasada há ${formatar(-valor)}` : "vence agora";
+}
+
 export function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   return value.toLocaleString("pt-BR");

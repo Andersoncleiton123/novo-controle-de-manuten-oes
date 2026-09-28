@@ -15,7 +15,7 @@ import {
   VEHICLE_TIPO_COLOR,
   VEHICLE_TIPO_LABEL,
 } from "@/lib/labels";
-import { formatHoras, formatKm } from "@/lib/format";
+import { formatHoras, formatKm, formatRestante } from "@/lib/format";
 import type { Vehicle, VehicleStatus, VehicleTipo, VehiclePlanStatus } from "@/lib/types";
 
 const NIVEL_ORDER: Record<string, number> = { atrasada: 0, atencao: 1, proxima: 2, sem_baseline: 3, em_dia: 4 };
@@ -159,8 +159,12 @@ export default async function VeiculosPage({
                   <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2">
                     <span className="truncate text-xs text-gray-600">
                       {plan.plano_nome}
-                      {plan.restante_horas !== null ? ` · faltam ${formatHoras(plan.restante_horas)}` : ""}
-                      {plan.restante_km !== null ? ` · faltam ${formatKm(plan.restante_km)}` : ""}
+                      {plan.restante_horas !== null
+                        ? ` · ${formatRestante(Number(plan.restante_horas), formatHoras, (t) => `faltam ${t}`)}`
+                        : ""}
+                      {plan.restante_km !== null
+                        ? ` · ${formatRestante(Number(plan.restante_km), formatKm, (t) => `faltam ${t}`)}`
+                        : ""}
                     </span>
                     <Badge className={NIVEL_ALERTA_COLOR[plan.nivel_alerta]}>
                       {NIVEL_ALERTA_LABEL[plan.nivel_alerta]}

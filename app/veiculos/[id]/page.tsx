@@ -7,7 +7,7 @@ import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
 import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
-import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
+import { formatCurrency, formatDate, formatHoras, formatKm, formatRestante } from "@/lib/format";
 import {
   CATEGORIA_HISTORICO_LABEL,
   NIVEL_ALERTA_COLOR,
@@ -213,9 +213,9 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">{p.plano_nome}</p>
                     <p className="text-xs text-gray-500">
-                      {p.restante_km !== null ? `${formatKm(p.restante_km)} restantes` : null}
+                      {p.restante_km !== null ? formatRestante(Number(p.restante_km), formatKm, (t) => `${t} restantes`) : null}
                       {p.restante_km !== null && p.restante_horas !== null ? " · " : null}
-                      {p.restante_horas !== null ? `${formatHoras(p.restante_horas)} restantes` : null}
+                      {p.restante_horas !== null ? formatRestante(Number(p.restante_horas), formatHoras, (t) => `${t} restantes`) : null}
                       {p.proxima_data ? ` · previsto ${formatDate(p.proxima_data)}` : null}
                       {p.nivel_alerta === "sem_baseline" ? "Sem última execução registrada" : null}
                     </p>
