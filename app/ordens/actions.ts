@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
@@ -83,11 +84,15 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   return { id: data!.id };
 }
 
+// OS concluída ou cancelada só volta a andar pela reabertura com senha de administrador.
+const STATUS_FINAIS: OrderStatus[] = ["concluida", "cancelada"];
+
 export async function updateOrderStatus(orderId: string, formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
 
   const status = str(formData.get("status")) as OrderStatus | null;
   if (!status) return { error: "Selecione um status." };
+  if (status === "concluida") return { error: "Use o botão \"Fechar ordem de serviço\" para concluir." };
 
   const { data: order } = await supabase
     .from("maintenance_orders")
@@ -96,55 +101,128 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
     .single();
 
   if (!order) return { error: "Ordem não encontrada." };
+  if (STATUS_FINAIS.includes(order.status)) {
+    return { error: "Ordem encerrada. Para alterar, reabra com a senha de administrador." };
+  }
 
   const payload: Partial<MaintenanceOrder> = {
     status,
     data_prevista: str(formData.get("data_prevista")),
   };
 
-  if (status === "concluida") {
-    payload.data_conclusao = str(formData.get("data_conclusao")) ?? new Date().toISOString().slice(0, 10);
-  }
-
   const { error } = await supabase.from("maintenance_orders").update(payload).eq("id", orderId);
   if (error) return { error: `Não foi possível atualizar a ordem: ${error.message}` };
-
-  if (status === "concluida") {
-    // Fecha o ciclo preventivo: usa esta execução como nova base do plano.
-    if (order.vehicle_maintenance_plan_id) {
-      await supabase
-        .from("vehicle_maintenance_plans")
-        .update({
-          ultima_execucao_data: payload.data_conclusao as string,
-          ultima_execucao_km: order.km,
-          ultima_execucao_horas: order.horas,
-        })
-        .eq("id", order.vehicle_maintenance_plan_id);
-    }
-    if (order.corrective_issue_id) {
-      await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
-    }
-    // Se a OS registrou uma leitura de KM/horímetro mais nova, mantém o veículo atualizado.
-    if (order.km !== null || order.horas !== null) {
-      await supabase.from("measurements").insert({
-        vehicle_id: order.vehicle_id,
-        km: order.km,
-        horas: order.horas,
-        data_leitura: payload.data_conclusao as string,
-        observacao: `Registrado ao concluir a OS ${order.numero_os}`,
-      });
-    }
-  }
 
   if (status === "aguardando_peca" || status === "em_execucao") {
     await supabase.from("vehicles").update({ status: "em_manutencao" }).eq("id", order.vehicle_id);
   }
 
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
+}
+
+export async function closeOrder(orderId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("maintenance_orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Ordem não encontrada." };
+  if (STATUS_FINAIS.includes(order.status)) return { error: "Esta ordem já está encerrada." };
+
+  const dataConclusao = str(formData.get("data_conclusao"));
+  if (!dataConclusao) return { error: "Informe a data de conclusão." };
+
+  const km = num(formData.get("km"));
+  const horas = num(formData.get("horas"));
+  const planId = str(formData.get("vehicle_maintenance_plan_id"));
+  if (planId && km === null && horas === null) {
+    return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
+  }
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({
+      status: "concluida",
+      data_conclusao: dataConclusao,
+      km,
+      horas,
+      vehicle_maintenance_plan_id: planId,
+    })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível fechar a ordem: ${error.message}` };
+
+  // Fecha o ciclo preventivo: usa esta execução como nova base do plano.
+  if (planId) {
+    await supabase
+      .from("vehicle_maintenance_plans")
+      .update({ ultima_execucao_data: dataConclusao, ultima_execucao_km: km, ultima_execucao_horas: horas })
+      .eq("id", planId);
+  }
+  if (order.corrective_issue_id) {
+    await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
+  }
+  // Se a OS registrou uma leitura de KM/horímetro, mantém o veículo atualizado.
+  if (km !== null || horas !== null) {
+    await supabase.from("measurements").insert({
+      vehicle_id: order.vehicle_id,
+      km,
+      horas,
+      data_leitura: dataConclusao,
+      observacao: `Registrado ao fechar a OS ${order.numero_os}`,
+    });
+  }
+
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
+}
+
+// Senha de administrador definida na Vercel (ADMIN_PASSWORD): mínimo 8 caracteres, com números e caractere especial.
+function senhaAdminValida(informada: string): { ok: boolean; error?: string } {
+  const configurada = process.env.ADMIN_PASSWORD ?? "";
+  if (configurada.length < 8 || !/[0-9]/.test(configurada) || !/[^A-Za-z0-9]/.test(configurada)) {
+    return {
+      ok: false,
+      error: "Senha de administrador não configurada. Cadastre ADMIN_PASSWORD na Vercel (mínimo 8 caracteres, com números e caractere especial).",
+    };
+  }
+  const a = createHash("sha256").update(informada).digest();
+  const b = createHash("sha256").update(configurada).digest();
+  return timingSafeEqual(a, b) ? { ok: true } : { ok: false, error: "Senha de administrador incorreta." };
+}
+
+export async function reopenOrder(orderId: string, formData: FormData): Promise<ActionResult> {
+  const senha = senhaAdminValida((formData.get("senha") ?? "").toString());
+  if (!senha.ok) return { error: senha.error };
+
+  const supabase = await createClient();
+  const { data: order } = await supabase
+    .from("maintenance_orders")
+    .select("id, vehicle_id, status")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Ordem não encontrada." };
+  if (!STATUS_FINAIS.includes(order.status)) return { error: "Esta ordem já está aberta." };
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({ status: "aberta", data_conclusao: null })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível reabrir a ordem: ${error.message}` };
+
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
+}
+
+function revalidateOrder(orderId: string, vehicleId: string) {
   revalidatePath("/ordens");
   revalidatePath(`/ordens/${orderId}`);
-  revalidatePath(`/veiculos/${order.vehicle_id}`);
+  revalidatePath(`/veiculos/${vehicleId}`);
   revalidatePath("/");
-  return { id: orderId };
 }
 
 export async function updateOrderDescription(orderId: string, formData: FormData): Promise<ActionResult> {

@@ -5,7 +5,6 @@ import { useState, useTransition } from "react";
 import { FieldGroup, Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { ORDER_STATUS_LABEL } from "@/lib/labels";
-import { todayISO } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -50,7 +49,9 @@ export function OrderStatusForm({
           onChange={(e) => setStatus(e.target.value as OrderStatus)}
           className="w-56"
         >
-          {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => (
+          {Object.entries(ORDER_STATUS_LABEL)
+            .filter(([value]) => value !== "concluida")
+            .map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
@@ -60,11 +61,6 @@ export function OrderStatusForm({
       <FieldGroup label="Data prevista" htmlFor="data_prevista">
         <Input id="data_prevista" name="data_prevista" type="date" defaultValue={dataPrevista ?? ""} />
       </FieldGroup>
-      {status === "concluida" ? (
-        <FieldGroup label="Data de conclusão" htmlFor="data_conclusao">
-          <Input id="data_conclusao" name="data_conclusao" type="date" defaultValue={todayISO()} />
-        </FieldGroup>
-      ) : null}
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Salvando…" : "Atualizar status"}
       </Button>
