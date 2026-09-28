@@ -176,7 +176,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label={vehicle.tipo === "betoneira" ? "Identificação" : "Placa"} value={vehicle.identificador} />
+        <StatCard
+          label={vehicle.tipo === "betoneira" ? "Identificação" : "Placa"}
+          value={vehicle.tipo === "betoneira" ? vehicle.identificador : <PlacaMercosul placa={vehicle.identificador} />}
+        />
         <StatCard label={caminhao ? "KM do caminhão" : "KM atual"} value={formatKm(leituras.km_atual)} />
         <StatCard
           label={caminhao ? "Horímetro do caminhão" : "Horímetro atual"}
