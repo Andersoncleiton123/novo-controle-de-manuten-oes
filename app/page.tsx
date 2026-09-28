@@ -5,7 +5,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
 import { Badge } from "@/components/ui/Badge";
-import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
+import { formatCurrency, formatDate, formatHoras, formatKm, formatRestante } from "@/lib/format";
 import {
   NIVEL_ALERTA_COLOR,
   NIVEL_ALERTA_ICON,
@@ -156,9 +156,9 @@ export default async function DashboardPage() {
                       </Badge>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      {p.restante_km !== null ? `Faltam ${formatKm(p.restante_km)}` : null}
+                      {p.restante_km !== null ? formatRestante(Number(p.restante_km), formatKm, (t) => `Faltam ${t}`) : null}
                       {p.restante_km !== null && p.restante_horas !== null ? " · " : null}
-                      {p.restante_horas !== null ? `Faltam ${formatHoras(p.restante_horas)}` : null}
+                      {p.restante_horas !== null ? formatRestante(Number(p.restante_horas), formatHoras, (t) => `Faltam ${t}`) : null}
                       {p.proxima_data ? ` · Previsto para ${formatDate(p.proxima_data)}` : null}
                     </p>
                   </li>
