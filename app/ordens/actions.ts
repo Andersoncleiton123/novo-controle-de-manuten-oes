@@ -180,6 +180,30 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
   return { id: orderId };
 }
 
+export async function updateOrderReadings(orderId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("maintenance_orders")
+    .select("id, vehicle_id, status")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Ordem não encontrada." };
+  if (STATUS_FINAIS.includes(order.status)) {
+    return { error: "Ordem encerrada. Para alterar, reabra com a senha de administrador." };
+  }
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({ km: num(formData.get("km")), horas: num(formData.get("horas")) })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível salvar KM e horímetro: ${error.message}` };
+
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
+}
+
 // Senha de administrador definida na Vercel (ADMIN_PASSWORD): mínimo 8 caracteres, com números e caractere especial.
 function senhaAdminValida(informada: string): { ok: boolean; error?: string } {
   const configurada = process.env.ADMIN_PASSWORD ?? "";

@@ -11,6 +11,7 @@ import { ReopenOrderForm } from "@/components/orders/ReopenOrderForm";
 import { ItemForm } from "@/components/orders/ItemForm";
 import { EditableItemRow } from "@/components/orders/EditableItemRow";
 import { EditableDescription } from "@/components/orders/EditableDescription";
+import { EditableReadings } from "@/components/orders/EditableReadings";
 import { OtherCostsForm } from "@/components/orders/OtherCostsForm";
 import {
   addOrderItem,
@@ -18,6 +19,7 @@ import {
   deleteOrderItem,
   reopenOrder,
   updateOrderItem,
+  updateOrderReadings,
   updateOrderDescription,
   updateOrderStatus,
   updateOtherCosts,
@@ -95,11 +97,16 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
             <span>Aberta em {formatDate(order.data_abertura)}</span>
             {order.data_prevista ? <span>Prevista para {formatDate(order.data_prevista)}</span> : null}
             {order.data_conclusao ? <span>Concluída em {formatDate(order.data_conclusao)}</span> : null}
-            {order.km !== null ? <span>{formatKm(order.km)}</span> : null}
-            {order.horas !== null ? <span>{formatHoras(order.horas)}</span> : null}
+            {encerrada && order.km !== null ? <span>{formatKm(order.km)}</span> : null}
+            {encerrada && order.horas !== null ? <span>{formatHoras(order.horas)}</span> : null}
             {order.suppliers ? <span>Oficina: {order.suppliers.nome}</span> : null}
             {order.responsavel ? <span>Responsável: {order.responsavel}</span> : null}
           </div>
+          {!encerrada ? (
+            <div className="mt-2">
+              <EditableReadings km={order.km} horas={order.horas} action={updateOrderReadings.bind(null, id)} />
+            </div>
+          ) : null}
           {order.observacoes ? <p className="mt-2 text-sm text-gray-600">{order.observacoes}</p> : null}
         </CardBody>
       </Card>
