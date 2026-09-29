@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { formatPlaca, isPlacaMercosul } from "@/components/ui/PlacaMercosul";
+import { senhaAdminValida } from "@/lib/admin";
 import type { VehicleStatus, VehicleTipo } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -150,6 +151,58 @@ export async function createMeasurement(vehicleId: string, formData: FormData): 
   }
 
   revalidatePath(`/veiculos/${vehicleId}`);
+  revalidatePath("/");
+  return { id: vehicleId };
+}
+
+// Correção de medição passada pelo administrador: grava como correção (sem a checagem de ordem)
+// e o banco recalcula a leitura atual do veículo pela medição mais recente.
+export async function updateMeasurement(
+  vehicleId: string,
+  measurementId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const senha = senhaAdminValida((formData.get("senha") ?? "").toString());
+  if (!senha.ok) return { error: senha.error };
+
+  const payload = {
+    data_leitura: str(formData.get("data_leitura")),
+    km: num(formData.get("km")),
+    horas: num(formData.get("horas")),
+    observacao: str(formData.get("observacao")),
+    correcao: true,
+  };
+  if (!payload.data_leitura) return { error: "Informe a data da leitura." };
+  if (payload.km === null && payload.horas === null) return { error: "Informe pelo menos o KM ou o horímetro." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("measurements")
+    .update({ ...payload, data_leitura: payload.data_leitura })
+    .eq("id", measurementId)
+    .eq("vehicle_id", vehicleId);
+  if (error) return { error: `Não foi possível corrigir a medição: ${error.message}` };
+
+  revalidatePath(`/veiculos/${vehicleId}`);
+  revalidatePath("/veiculos");
+  revalidatePath("/");
+  return { id: vehicleId };
+}
+
+export async function deleteMeasurement(
+  vehicleId: string,
+  measurementId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const senha = senhaAdminValida((formData.get("senha") ?? "").toString());
+  if (!senha.ok) return { error: senha.error };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("measurements").delete().eq("id", measurementId).eq("vehicle_id", vehicleId);
+  if (error) return { error: `Não foi possível excluir a medição: ${error.message}` };
+
+  revalidatePath(`/veiculos/${vehicleId}`);
+  revalidatePath("/veiculos");
   revalidatePath("/");
   return { id: vehicleId };
 }

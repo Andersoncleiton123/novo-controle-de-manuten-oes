@@ -7,6 +7,8 @@ import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
 import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
+import { EditableMeasurementRow } from "@/components/vehicles/EditableMeasurementRow";
+import { deleteMeasurement, updateMeasurement } from "@/app/veiculos/actions";
 import { formatCurrency, formatDate, formatHoras, formatKm, formatRestante } from "@/lib/format";
 import {
   CATEGORIA_HISTORICO_LABEL,
@@ -334,7 +336,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
       </Card>
 
       <Card>
-        <CardHeader title="Medições registradas" subtitle="Histórico de KM e horímetro" />
+        <CardHeader title="Medições registradas" subtitle="Histórico de KM e horímetro — correção pelo lápis exige senha de administrador" />
         <CardBody className="p-0">
           {!measurements || measurements.length === 0 ? (
             <div className="p-4">
@@ -343,12 +345,12 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
           ) : (
             <ul className="divide-y divide-gray-100">
               {measurements.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                  <span className="text-gray-500">{formatDate(m.data_leitura)}</span>
-                  <span className="text-gray-900">{m.km !== null ? formatKm(m.km) : "—"}</span>
-                  <span className="text-gray-900">{m.horas !== null ? formatHoras(m.horas) : "—"}</span>
-                  {m.correcao ? <Badge className="bg-gray-100 text-gray-500">correção</Badge> : <span />}
-                </li>
+                <EditableMeasurementRow
+                  key={m.id}
+                  measurement={m}
+                  updateAction={updateMeasurement.bind(null, id, m.id)}
+                  deleteAction={deleteMeasurement.bind(null, id, m.id)}
+                />
               ))}
             </ul>
           )}
