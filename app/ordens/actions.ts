@@ -1,8 +1,8 @@
 "use server";
 
-import { createHash, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { senhaAdminValida } from "@/lib/admin";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -143,6 +143,21 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
     return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
   }
 
+  // Registra a leitura da execução antes de fechar: o banco recusa KM/horímetro fora de ordem
+  // em relação às medições anteriores e seguintes do veículo.
+  if (km !== null || horas !== null) {
+    const { error: leituraError } = await supabase.from("measurements").insert({
+      vehicle_id: order.vehicle_id,
+      km,
+      horas,
+      data_leitura: dataConclusao,
+      observacao: `Registrado ao fechar a OS ${order.numero_os}`,
+    });
+    if (leituraError) {
+      return { error: `KM/horímetro não conferem com as medições do veículo: ${leituraError.message}` };
+    }
+  }
+
   const { error } = await supabase
     .from("maintenance_orders")
     .update({
@@ -165,17 +180,6 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
   if (order.corrective_issue_id) {
     await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
   }
-  // Se a OS registrou uma leitura de KM/horímetro, mantém o veículo atualizado.
-  if (km !== null || horas !== null) {
-    await supabase.from("measurements").insert({
-      vehicle_id: order.vehicle_id,
-      km,
-      horas,
-      data_leitura: dataConclusao,
-      observacao: `Registrado ao fechar a OS ${order.numero_os}`,
-    });
-  }
-
   revalidateOrder(orderId, order.vehicle_id);
   return { id: orderId };
 }
@@ -202,20 +206,6 @@ export async function updateOrderReadings(orderId: string, formData: FormData): 
 
   revalidateOrder(orderId, order.vehicle_id);
   return { id: orderId };
-}
-
-// Senha de administrador definida na Vercel (ADMIN_PASSWORD): mínimo 8 caracteres, com números e caractere especial.
-function senhaAdminValida(informada: string): { ok: boolean; error?: string } {
-  const configurada = process.env.ADMIN_PASSWORD ?? "";
-  if (configurada.length < 8 || !/[0-9]/.test(configurada) || !/[^A-Za-z0-9]/.test(configurada)) {
-    return {
-      ok: false,
-      error: "Senha de administrador não configurada. Cadastre ADMIN_PASSWORD na Vercel (mínimo 8 caracteres, com números e caractere especial).",
-    };
-  }
-  const a = createHash("sha256").update(informada).digest();
-  const b = createHash("sha256").update(configurada).digest();
-  return timingSafeEqual(a, b) ? { ok: true } : { ok: false, error: "Senha de administrador incorreta." };
 }
 
 export async function reopenOrder(orderId: string, formData: FormData): Promise<ActionResult> {
