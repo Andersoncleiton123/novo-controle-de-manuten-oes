@@ -16,7 +16,7 @@ import {
   VEHICLE_TIPO_COLOR,
   VEHICLE_TIPO_LABEL,
 } from "@/lib/labels";
-import { formatHoras, formatKm, formatRestante } from "@/lib/format";
+import { formatDate, formatHoras, formatKm, formatRestante } from "@/lib/format";
 import type { Vehicle, VehicleStatus, VehicleTipo, VehiclePlanStatus } from "@/lib/types";
 
 const NIVEL_ORDER: Record<string, number> = { atrasada: 0, atencao: 1, proxima: 2, sem_baseline: 3, em_dia: 4 };
@@ -52,14 +52,29 @@ export default async function VeiculosPage({
     );
   }
 
-  const [{ data: vehicles }, { data: planStatus }, { data: allVehicles }] = await Promise.all([
+  const [{ data: vehicles }, { data: planStatus }, { data: allVehicles }, { data: medicoes }] = await Promise.all([
     query.returns<Vehicle[]>(),
     supabase.from("v_vehicle_plan_status").select("*").returns<VehiclePlanStatus[]>(),
     supabase
       .from("vehicles")
       .select("id, identificador, numero_interno, km_atual, horimetro_atual, caminhao_id")
       .returns<Pick<Vehicle, "id" | "identificador" | "numero_interno" | "km_atual" | "horimetro_atual" | "caminhao_id">[]>(),
+    supabase
+      .from("measurements")
+      .select("vehicle_id, data_leitura")
+      .order("data_leitura", { ascending: false })
+      .returns<{ vehicle_id: string; data_leitura: string }[]>(),
   ]);
+
+  // Data da última medição de KM/horímetro de cada veículo (a betoneira usa a do caminhão).
+  const ultimaMedicao = new Map<string, string>();
+  for (const m of medicoes ?? []) if (!ultimaMedicao.has(m.vehicle_id)) ultimaMedicao.set(m.vehicle_id, m.data_leitura);
+  const hoje = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`).getTime();
+  function medicaoInfo(vehicleId: string) {
+    const data = ultimaMedicao.get(vehicleId) ?? null;
+    const dias = data ? Math.floor((hoje - new Date(`${data}T00:00:00Z`).getTime()) / 86_400_000) : null;
+    return { data, dias, atrasada: dias === null || dias > 7 };
+  }
 
   // Vínculo betoneira ↔ caminhão para mostrar a placa/leituras do caminhão na betoneira e vice-versa.
   const byId = new Map((allVehicles ?? []).map((v) => [v.id, v]));
@@ -115,6 +130,7 @@ export default async function VeiculosPage({
             const caminhao = v.caminhao_id ? byId.get(v.caminhao_id) : undefined;
             const betoneira = betoneiraDoCaminhao.get(v.id);
             const leituras = caminhao ?? v;
+            const medicao = medicaoInfo(leituras.id);
             return (
             <Card key={v.id} className="h-full p-4 transition-shadow hover:shadow-md">
               <div className="flex items-start justify-between gap-2">
@@ -146,6 +162,11 @@ export default async function VeiculosPage({
                   <span>{formatKm(leituras.km_atual)}</span>
                   <span>{formatHoras(leituras.horimetro_atual)}</span>
                 </div>
+                <p className={`mt-1 text-right text-xs ${medicao.atrasada ? "font-medium text-amber-700" : "text-gray-500"}`}>
+                  {medicao.data
+                    ? `Medição em ${formatDate(medicao.data)} · ${medicao.dias === 0 ? "hoje" : medicao.dias === 1 ? "há 1 dia" : `há ${medicao.dias} dias`}`
+                    : "Sem medição registrada"}
+                </p>
                 {caminhao ? <p className="mt-1 text-xs text-gray-500">Montada no caminhão {caminhao.identificador}</p> : null}
                 {betoneira ? (
                   <p className="mt-1 text-xs text-gray-500">Betoneira montada: {betoneira.numero_interno ?? betoneira.identificador}</p>
