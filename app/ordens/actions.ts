@@ -157,7 +157,20 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
 
   // Registra a leitura da execução antes de fechar: o banco recusa KM/horímetro fora de ordem
   // em relação às medições anteriores e seguintes do veículo.
+  // Reabrir e fechar de novo não duplica a leitura: só grava se ainda não houver a mesma.
+  let jaRegistrada = false;
   if (km !== null || horas !== null) {
+    let existente = supabase
+      .from("measurements")
+      .select("id")
+      .eq("vehicle_id", order.vehicle_id)
+      .eq("data_leitura", dataConclusao);
+    existente = km === null ? existente.is("km", null) : existente.eq("km", km);
+    existente = horas === null ? existente.is("horas", null) : existente.eq("horas", horas);
+    const { data: iguais } = await existente.limit(1);
+    jaRegistrada = (iguais ?? []).length > 0;
+  }
+  if (!jaRegistrada && (km !== null || horas !== null)) {
     const { error: leituraError } = await supabase.from("measurements").insert({
       vehicle_id: order.vehicle_id,
       km,
