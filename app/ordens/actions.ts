@@ -154,6 +154,16 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
   if (planId && km === null && horas === null) {
     return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
   }
+  if (!planId && order.tipo === "preventiva") {
+    const { count } = await supabase
+      .from("vehicle_maintenance_plans")
+      .select("id", { count: "exact", head: true })
+      .eq("vehicle_id", order.vehicle_id)
+      .eq("ativo", true);
+    if ((count ?? 0) > 0) {
+      return { error: "Selecione o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
+    }
+  }
 
   // Registra a leitura da execução antes de fechar: o banco recusa KM/horímetro fora de ordem
   // em relação às medições anteriores e seguintes do veículo.
@@ -197,10 +207,14 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
 
   // Fecha o ciclo preventivo: usa esta execução como nova base do plano.
   if (planId) {
-    await supabase
+    const { error: planoError } = await supabase
       .from("vehicle_maintenance_plans")
       .update({ ultima_execucao_data: dataConclusao, ultima_execucao_km: km, ultima_execucao_horas: horas })
       .eq("id", planId);
+    if (planoError) {
+      revalidateOrder(orderId, order.vehicle_id);
+      return { error: `Ordem fechada, mas o plano preventivo não foi atualizado: ${planoError.message}` };
+    }
   }
   if (order.corrective_issue_id) {
     await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
@@ -265,6 +279,68 @@ function revalidateOrder(orderId: string, vehicleId: string) {
   revalidatePath(`/ordens/${orderId}`);
   revalidatePath(`/veiculos/${vehicleId}`);
   revalidatePath("/");
+}
+
+const TIPOS: OrderTipo[] = ["preventiva", "corretiva"];
+const PRIORIDADES: Prioridade[] = ["critica", "alta", "media", "baixa"];
+
+export async function updateOrderDetails(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("maintenance_orders")
+    .select("id, vehicle_id, status")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Ordem não encontrada." };
+  if (STATUS_FINAIS.includes(order.status)) {
+    return { error: "Ordem encerrada. Somente o administrador pode reabrir." };
+  }
+
+  const tipo = str(formData.get("tipo")) as OrderTipo | null;
+  if (!tipo || !TIPOS.includes(tipo)) return { error: "Selecione o tipo da ordem." };
+
+  const prioridade = str(formData.get("prioridade")) as Prioridade | null;
+  if (!prioridade || !PRIORIDADES.includes(prioridade)) return { error: "Selecione a prioridade." };
+
+  const dataAbertura = str(formData.get("data_abertura"));
+  if (!dataAbertura) return { error: "Informe a data de abertura." };
+
+  // Plano só faz sentido em preventiva; ao passar para corretiva o vínculo é removido.
+  let planId = tipo === "preventiva" ? str(formData.get("vehicle_maintenance_plan_id")) : null;
+  if (planId) {
+    const { data: plano } = await supabase
+      .from("vehicle_maintenance_plans")
+      .select("id")
+      .eq("id", planId)
+      .eq("vehicle_id", order.vehicle_id)
+      .maybeSingle();
+    if (!plano) planId = null;
+  }
+
+  const fornecedorId = await resolveSupplierId(supabase, str(formData.get("fornecedor")));
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({
+      tipo,
+      prioridade,
+      vehicle_maintenance_plan_id: planId,
+      data_abertura: dataAbertura,
+      data_prevista: str(formData.get("data_prevista")),
+      fornecedor_id: fornecedorId,
+      responsavel: str(formData.get("responsavel")),
+      observacoes: str(formData.get("observacoes")),
+    })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível salvar a ordem: ${error.message}` };
+
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
 }
 
 export async function updateOrderDescription(orderId: string, formData: FormData): Promise<ActionResult> {

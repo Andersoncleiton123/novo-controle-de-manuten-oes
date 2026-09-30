@@ -13,6 +13,7 @@ import { ItemForm } from "@/components/orders/ItemForm";
 import { EditableItemRow } from "@/components/orders/EditableItemRow";
 import { EditableDescription } from "@/components/orders/EditableDescription";
 import { EditableReadings } from "@/components/orders/EditableReadings";
+import { EditOrderForm } from "@/components/orders/EditOrderForm";
 import { OtherCostsForm } from "@/components/orders/OtherCostsForm";
 import {
   addOrderItem,
@@ -22,6 +23,7 @@ import {
   updateOrderItem,
   updateOrderReadings,
   updateOrderDescription,
+  updateOrderDetails,
   updateOrderStatus,
   updateOtherCosts,
 } from "@/app/ordens/actions";
@@ -62,6 +64,7 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
     .returns<{ id: string; maintenance_plans: { nome: string; ativo: boolean } }[]>();
 
   const encerrada = order.status === "concluida" || order.status === "cancelada";
+  const planosOpcoes = (planos ?? []).map((p) => ({ id: p.id, nome: p.maintenance_plans.nome }));
 
   const totalPecas = (items ?? []).reduce((acc, i) => acc + Number(i.quantidade) * Number(i.valor_unitario), 0);
   const totalServico = (items ?? []).reduce((acc, i) => acc + Number(i.mao_de_obra), 0);
@@ -110,6 +113,22 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
             </div>
           ) : null}
           {order.observacoes ? <p className="mt-2 text-sm text-gray-600">{order.observacoes}</p> : null}
+          {!encerrada ? (
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              <EditOrderForm
+                tipo={order.tipo}
+                prioridade={order.prioridade}
+                dataAbertura={order.data_abertura}
+                dataPrevista={order.data_prevista}
+                fornecedor={order.suppliers?.nome ?? null}
+                responsavel={order.responsavel}
+                observacoes={order.observacoes}
+                planoId={order.vehicle_maintenance_plan_id}
+                planos={planosOpcoes}
+                action={updateOrderDetails.bind(null, id)}
+              />
+            </div>
+          ) : null}
         </CardBody>
       </Card>
 
@@ -138,8 +157,9 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                 <CloseOrderForm
                   km={order.km}
                   horas={order.horas}
-                  planos={(planos ?? []).map((p) => ({ id: p.id, nome: p.maintenance_plans.nome }))}
+                  planos={planosOpcoes}
                   planoAtualId={order.vehicle_maintenance_plan_id}
+                  preventiva={order.tipo === "preventiva"}
                   action={closeOrder.bind(null, id)}
                 />
               </div>

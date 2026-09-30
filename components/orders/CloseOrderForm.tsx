@@ -13,18 +13,24 @@ export function CloseOrderForm({
   horas,
   planos,
   planoAtualId,
+  preventiva,
   action,
 }: {
   km: number | null;
   horas: number | null;
   planos: { id: string; nome: string }[];
   planoAtualId: string | null;
+  preventiva: boolean;
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Preventiva precisa apontar o plano atendido, senão a contagem para a próxima troca não reinicia.
+  const exigePlano = preventiva && planos.length > 0;
+  const planoPadrao = planoAtualId ?? (exigePlano && planos.length === 1 ? planos[0].id : "");
 
   if (!aberto) {
     return (
@@ -65,10 +71,16 @@ export function CloseOrderForm({
       <FieldGroup
         label="Plano preventivo atendido"
         htmlFor="vehicle_maintenance_plan_id"
-        hint="A data, o KM e o horímetro acima passam a ser a última execução do plano"
+        required={exigePlano}
+        hint="A data, o KM e o horímetro acima passam a ser a última execução do plano e reiniciam a contagem para a próxima"
       >
-        <Select id="vehicle_maintenance_plan_id" name="vehicle_maintenance_plan_id" defaultValue={planoAtualId ?? ""}>
-          <option value="">Nenhum</option>
+        <Select
+          id="vehicle_maintenance_plan_id"
+          name="vehicle_maintenance_plan_id"
+          defaultValue={planoPadrao}
+          required={exigePlano}
+        >
+          <option value="">{exigePlano ? "Selecione o plano" : "Nenhum"}</option>
           {planos.map((p) => (
             <option key={p.id} value={p.id}>
               {p.nome}
