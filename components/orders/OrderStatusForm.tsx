@@ -12,10 +12,12 @@ type ActionResult = { error?: string; id?: string };
 export function OrderStatusForm({
   currentStatus,
   dataPrevista,
+  podeCancelar,
   action,
 }: {
   currentStatus: OrderStatus;
   dataPrevista: string | null;
+  podeCancelar: boolean;
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -50,7 +52,7 @@ export function OrderStatusForm({
           className="w-56"
         >
           {Object.entries(ORDER_STATUS_LABEL)
-            .filter(([value]) => value !== "concluida")
+            .filter(([value]) => value !== "concluida" && (podeCancelar || value !== "cancelada"))
             .map(([value, label]) => (
             <option key={value} value={value}>
               {label}

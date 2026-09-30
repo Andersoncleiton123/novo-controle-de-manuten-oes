@@ -1,8 +1,11 @@
+import { notFound } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { isAdmin } from "@/lib/auth";
 import { PlanForm } from "@/components/plans/PlanForm";
 import { createPlan } from "@/app/planos/actions";
 
-export default function NovoPlanoPage() {
+export default async function NovoPlanoPage() {
+  if (!(await isAdmin())) notFound();
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>

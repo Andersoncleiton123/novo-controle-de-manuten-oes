@@ -1,12 +1,27 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { Database } from "@/lib/types";
 
-// V1 has no login yet (see architecture notes) — RLS is open and every
-// request uses the anon key, so a plain client is enough. No cookie-based
-// session handling (@supabase/ssr) is needed until auth is introduced.
+// Cliente do servidor com a sessão do usuário logado (cookies). As regras de acesso
+// por perfil ficam no banco (RLS), então toda consulta roda como o usuário.
 export async function createClient() {
-  return createSupabaseClient<Database>(
+  const cookieStore = await cookies();
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          } catch {
+            // Chamado de Server Component: a sessão é renovada pelo proxy.
+          }
+        },
+      },
+    },
   );
 }

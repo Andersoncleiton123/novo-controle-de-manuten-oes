@@ -18,7 +18,7 @@ export function EditableItemRow({
 }: {
   item: MaintenanceOrderItem;
   updateAction: (formData: FormData) => Promise<ActionResult>;
-  deleteAction: () => Promise<ActionResult>;
+  deleteAction?: () => Promise<ActionResult>;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -96,7 +96,7 @@ export function EditableItemRow({
           >
             <Pencil className="h-4 w-4" />
           </button>
-          <DeleteItemButton action={deleteAction} />
+          {deleteAction ? <DeleteItemButton action={deleteAction} /> : null}
         </div>
       </td>
     </tr>

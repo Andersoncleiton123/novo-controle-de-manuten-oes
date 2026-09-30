@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { exigirAprovado } from "@/lib/auth";
 import type { Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -48,6 +49,9 @@ async function uploadAttachments(
 }
 
 export async function createIssue(formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const vehicleId = str(formData.get("vehicle_id"));
@@ -79,6 +83,9 @@ export async function createIssue(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateIssueStatus(issueId: string, status: "aberto" | "resolvido"): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("corrective_issues")

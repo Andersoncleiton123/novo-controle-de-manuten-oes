@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdmin } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -39,6 +40,7 @@ const NIVEL_ORDER: Record<string, number> = { atrasada: 0, atencao: 1, proxima: 
 export default async function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  const admin = await isAdmin();
 
   const { data: vehicle } = await supabase.from("vehicles").select("*").eq("id", id).single<Vehicle>();
   if (!vehicle) notFound();
@@ -144,9 +146,11 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
           <LinkButton href={`/ordens/nova?veiculo=${id}`} size="sm">
             Abrir ordem de manutenção
           </LinkButton>
-          <LinkButton href={`/veiculos/${id}/editar`} variant="ghost" size="sm">
-            Editar
-          </LinkButton>
+          {admin ? (
+            <LinkButton href={`/veiculos/${id}/editar`} variant="ghost" size="sm">
+              Editar
+            </LinkButton>
+          ) : null}
         </div>
       </div>
 
@@ -336,7 +340,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
       </Card>
 
       <Card>
-        <CardHeader title="Medições registradas" subtitle="Histórico de KM e horímetro — correção pelo lápis exige senha de administrador" />
+        <CardHeader title="Medições registradas" subtitle="Histórico de KM e horímetro — correção pelo lápis só para o administrador" />
         <CardBody className="p-0">
           {!measurements || measurements.length === 0 ? (
             <div className="p-4">
@@ -347,6 +351,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
               {measurements.map((m) => (
                 <EditableMeasurementRow
                   key={m.id}
+                  podeCorrigir={admin}
                   measurement={m}
                   updateAction={updateMeasurement.bind(null, id, m.id)}
                   deleteAction={deleteMeasurement.bind(null, id, m.id)}

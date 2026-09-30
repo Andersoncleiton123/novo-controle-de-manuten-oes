@@ -13,10 +13,12 @@ type ActionResult = { error?: string; id?: string };
 
 export function EditableMeasurementRow({
   measurement: m,
+  podeCorrigir,
   updateAction,
   deleteAction,
 }: {
   measurement: Measurement;
+  podeCorrigir: boolean;
   updateAction: (formData: FormData) => Promise<ActionResult>;
   deleteAction: (formData: FormData) => Promise<ActionResult>;
 }) {
@@ -46,6 +48,7 @@ export function EditableMeasurementRow({
         <span className="text-gray-900">{m.km !== null ? formatKm(m.km) : "—"}</span>
         <span className="text-gray-900">{m.horas !== null ? formatHoras(m.horas) : "—"}</span>
         {m.correcao ? <Badge className="bg-gray-100 text-gray-500">correção</Badge> : <span />}
+        {podeCorrigir ? (
         <button
           type="button"
           aria-label="Corrigir medição"
@@ -54,6 +57,7 @@ export function EditableMeasurementRow({
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
+        ) : null}
       </li>
     );
   }
@@ -81,9 +85,6 @@ export function EditableMeasurementRow({
         </div>
         <FieldGroup label="Observação" htmlFor={`obs_${m.id}`}>
           <Input id={`obs_${m.id}`} name="observacao" defaultValue={m.observacao ?? ""} />
-        </FieldGroup>
-        <FieldGroup label="Senha de administrador" htmlFor={`senha_${m.id}`}>
-          <Input id={`senha_${m.id}`} name="senha" type="password" required autoComplete="current-password" className="w-56" />
         </FieldGroup>
         <div className="flex flex-wrap gap-2">
           <Button type="submit" size="sm" disabled={pending}>

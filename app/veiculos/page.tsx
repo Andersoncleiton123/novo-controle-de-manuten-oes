@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdmin } from "@/lib/auth";
 import { Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
@@ -29,6 +30,7 @@ export default async function VeiculosPage({
 }) {
   const { q, status, tipo } = await searchParams;
   const supabase = await createClient();
+  const admin = await isAdmin();
 
   let query = supabase
     .from("vehicles")
@@ -94,7 +96,9 @@ export default async function VeiculosPage({
               </LinkButton>
             </>
           ) : null}
-          <LinkButton href={tipo ? `/veiculos/novo?tipo=${tipo}` : "/veiculos/novo"}>{novoLabel}</LinkButton>
+          {admin ? (
+            <LinkButton href={tipo ? `/veiculos/novo?tipo=${tipo}` : "/veiculos/novo"}>{novoLabel}</LinkButton>
+          ) : null}
         </div>
       </div>
 
@@ -125,13 +129,15 @@ export default async function VeiculosPage({
                     <Badge className={VEHICLE_STATUS_COLOR[v.status]}>{VEHICLE_STATUS_LABEL[v.status]}</Badge>
                     <Badge className={VEHICLE_TIPO_COLOR[v.tipo]}>{VEHICLE_TIPO_LABEL[v.tipo]}</Badge>
                   </div>
-                  <Link
-                    href={`/veiculos/${v.id}/editar`}
-                    aria-label="Editar veículo"
-                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Link>
+                  {admin ? (
+                    <Link
+                      href={`/veiculos/${v.id}/editar`}
+                      aria-label="Editar veículo"
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Link>
+                  ) : null}
                 </div>
               </div>
               <Link href={`/veiculos/${v.id}`} className="mt-3 block">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdmin } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -17,6 +18,7 @@ export const revalidate = 0;
 export default async function PlanoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  const admin = await isAdmin();
 
   const { data: plan } = await supabase.from("maintenance_plans").select("*").eq("id", id).single<MaintenancePlan>();
   if (!plan) notFound();
@@ -47,9 +49,11 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
           </div>
           {plan.descricao ? <p className="text-sm text-gray-500">{plan.descricao}</p> : null}
         </div>
-        <LinkButton href={`/planos/${id}/editar`} variant="secondary" size="sm">
-          Editar plano
-        </LinkButton>
+        {admin ? (
+          <LinkButton href={`/planos/${id}/editar`} variant="secondary" size="sm">
+            Editar plano
+          </LinkButton>
+        ) : null}
       </div>
 
       <Card>
@@ -93,7 +97,7 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={NIVEL_ALERTA_COLOR[v.nivel_alerta]}>{NIVEL_ALERTA_LABEL[v.nivel_alerta]}</Badge>
-                    <UnlinkButton action={unlinkVehiclePlan.bind(null, id, v.vehicle_plan_id)} />
+                    {admin ? <UnlinkButton action={unlinkVehiclePlan.bind(null, id, v.vehicle_plan_id)} /> : null}
                   </div>
                 </li>
               ))}
@@ -102,7 +106,7 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
         </CardBody>
       </Card>
 
-      {allVehicles && allVehicles.length > 0 ? (
+      {admin && allVehicles && allVehicles.length > 0 ? (
         <Card>
           <CardHeader
             title="Vincular ou corrigir um veículo"
