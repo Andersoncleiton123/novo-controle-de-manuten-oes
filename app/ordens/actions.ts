@@ -281,6 +281,68 @@ function revalidateOrder(orderId: string, vehicleId: string) {
   revalidatePath("/");
 }
 
+const TIPOS: OrderTipo[] = ["preventiva", "corretiva"];
+const PRIORIDADES: Prioridade[] = ["critica", "alta", "media", "baixa"];
+
+export async function updateOrderDetails(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("maintenance_orders")
+    .select("id, vehicle_id, status")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Ordem não encontrada." };
+  if (STATUS_FINAIS.includes(order.status)) {
+    return { error: "Ordem encerrada. Somente o administrador pode reabrir." };
+  }
+
+  const tipo = str(formData.get("tipo")) as OrderTipo | null;
+  if (!tipo || !TIPOS.includes(tipo)) return { error: "Selecione o tipo da ordem." };
+
+  const prioridade = str(formData.get("prioridade")) as Prioridade | null;
+  if (!prioridade || !PRIORIDADES.includes(prioridade)) return { error: "Selecione a prioridade." };
+
+  const dataAbertura = str(formData.get("data_abertura"));
+  if (!dataAbertura) return { error: "Informe a data de abertura." };
+
+  // Plano só faz sentido em preventiva; ao passar para corretiva o vínculo é removido.
+  let planId = tipo === "preventiva" ? str(formData.get("vehicle_maintenance_plan_id")) : null;
+  if (planId) {
+    const { data: plano } = await supabase
+      .from("vehicle_maintenance_plans")
+      .select("id")
+      .eq("id", planId)
+      .eq("vehicle_id", order.vehicle_id)
+      .maybeSingle();
+    if (!plano) planId = null;
+  }
+
+  const fornecedorId = await resolveSupplierId(supabase, str(formData.get("fornecedor")));
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({
+      tipo,
+      prioridade,
+      vehicle_maintenance_plan_id: planId,
+      data_abertura: dataAbertura,
+      data_prevista: str(formData.get("data_prevista")),
+      fornecedor_id: fornecedorId,
+      responsavel: str(formData.get("responsavel")),
+      observacoes: str(formData.get("observacoes")),
+    })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível salvar a ordem: ${error.message}` };
+
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
+}
+
 export async function updateOrderDescription(orderId: string, formData: FormData): Promise<ActionResult> {
   const acesso = await exigirAprovado();
   if (acesso) return { error: acesso };
