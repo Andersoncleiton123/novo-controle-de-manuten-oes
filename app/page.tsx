@@ -29,6 +29,9 @@ export const revalidate = 0;
 
 const NIVEL_ORDER: Record<string, number> = { atrasada: 0, atencao: 1, proxima: 2, sem_baseline: 3, em_dia: 4 };
 
+// A contagem regressiva das trocas depende da medição semanal de KM/horímetro.
+const DIAS_SEM_MEDICAO = 7;
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -51,6 +54,28 @@ export default async function DashboardPage() {
       .order("nome")
       .returns<Pick<Vehicle, "id" | "numero_interno" | "identificador" | "nome" | "status" | "cliente_atual" | "local_atual">[]>(),
   ]);
+
+  // Última medição de cada caminhão da frota ativa.
+  const frotaIds = (fleetVehicles ?? []).map((v) => v.id);
+  const { data: medicoes } = frotaIds.length
+    ? await supabase
+        .from("measurements")
+        .select("vehicle_id, data_leitura")
+        .in("vehicle_id", frotaIds)
+        .order("data_leitura", { ascending: false })
+        .returns<{ vehicle_id: string; data_leitura: string }[]>()
+    : { data: [] as { vehicle_id: string; data_leitura: string }[] };
+  const ultimaMedicao = new Map<string, string>();
+  for (const m of medicoes ?? []) if (!ultimaMedicao.has(m.vehicle_id)) ultimaMedicao.set(m.vehicle_id, m.data_leitura);
+  const hoje = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`).getTime();
+  const semMedicao = (fleetVehicles ?? [])
+    .map((v) => {
+      const data = ultimaMedicao.get(v.id) ?? null;
+      const dias = data ? Math.floor((hoje - new Date(`${data}T00:00:00Z`).getTime()) / 86_400_000) : null;
+      return { ...v, data, dias };
+    })
+    .filter((v) => v.dias === null || v.dias > DIAS_SEM_MEDICAO)
+    .sort((a, b) => (b.dias ?? Infinity) - (a.dias ?? Infinity));
 
   const sortedAlerts = (alerts ?? []).sort(
     (a, b) => (NIVEL_ORDER[a.nivel] ?? 9) - (NIVEL_ORDER[b.nivel] ?? 9),
@@ -100,6 +125,40 @@ export default async function DashboardPage() {
           icon={<CircleDollarSign className="h-4 w-4 text-gray-400" />}
         />
       </div>
+
+      {semMedicao.length > 0 ? (
+        <Card className="border-amber-200">
+          <CardHeader
+            title={`Medição semanal pendente (${semMedicao.length})`}
+            subtitle={`Caminhões sem medição de KM/horímetro há mais de ${DIAS_SEM_MEDICAO} dias — a contagem para a próxima troca fica parada`}
+          />
+          <CardBody className="p-0">
+            <ul className="divide-y divide-gray-100">
+              {semMedicao.map((v) => (
+                <li key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <PlacaMercosul placa={v.identificador} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900">{v.nome ?? v.identificador}</p>
+                      <p className="text-xs text-amber-700">
+                        {v.data
+                          ? `Última medição em ${formatDate(v.data)} · há ${v.dias} dias`
+                          : "Nenhuma medição registrada"}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/veiculos/${v.id}/medicao`}
+                    className="shrink-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Lançar medição
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
