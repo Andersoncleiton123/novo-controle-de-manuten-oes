@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
@@ -24,7 +25,7 @@ export default async function PlanosPage() {
           <h1 className="text-xl font-semibold text-gray-900">Planos de manutenção preventiva</h1>
           <p className="text-sm text-gray-500">Catálogo de serviços e seus intervalos.</p>
         </div>
-        <LinkButton href="/planos/novo">+ Novo plano</LinkButton>
+        {(await isAdmin()) ? <LinkButton href="/planos/novo">+ Novo plano</LinkButton> : null}
       </div>
 
       {!plans || plans.length === 0 ? (

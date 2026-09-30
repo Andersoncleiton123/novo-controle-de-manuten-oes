@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { VehicleForm } from "@/components/vehicles/VehicleForm";
@@ -7,6 +8,7 @@ import { deleteVehicle, updateVehicle } from "@/app/veiculos/actions";
 import type { Vehicle } from "@/lib/types";
 
 export default async function EditarVeiculoPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin())) notFound();
   const { id } = await params;
   const supabase = await createClient();
   const [{ data: vehicle }, { data: caminhoes }] = await Promise.all([

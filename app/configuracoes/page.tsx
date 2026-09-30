@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/auth";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { AlertSettingsForm } from "@/components/settings/AlertSettingsForm";
 import { updateAlertSettings } from "@/app/configuracoes/actions";
@@ -7,6 +9,7 @@ import type { AlertSettings } from "@/lib/types";
 export const revalidate = 0;
 
 export default async function ConfiguracoesPage() {
+  if (!(await isAdmin())) notFound();
   const supabase = await createClient();
   const { data: settings } = await supabase.from("alert_settings").select("*").eq("id", 1).single<AlertSettings>();
 

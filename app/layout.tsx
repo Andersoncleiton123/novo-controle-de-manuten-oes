@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/layout/AppShell";
+import { getUsuarioAtual, isAdmin } from "@/lib/auth";
+import { sair } from "@/app/login/actions";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,12 +28,38 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0a",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const usuario = await getUsuarioAtual();
+
+  let conteudo: React.ReactNode;
+  if (!usuario) {
+    // Telas de login (o proxy manda para /login quem não está logado).
+    conteudo = children;
+  } else if (!usuario.aprovado || !usuario.emailConfirmado) {
+    conteudo = (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-sm space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+          <p className="text-base font-semibold text-gray-900">Acesso aguardando aprovação</p>
+          <p className="text-sm text-gray-600">
+            A conta {usuario.email} foi criada. O administrador precisa aprovar o acesso antes do primeiro uso.
+          </p>
+          <form action={sair}>
+            <button type="submit" className="text-sm font-medium text-brand-600 hover:underline">
+              Sair
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  } else {
+    conteudo = (
+      <AppShell usuario={{ email: usuario.email, nome: usuario.nome, isAdmin: await isAdmin() }}>{children}</AppShell>
+    );
+  }
+
   return (
     <html lang="pt-BR">
-      <body className="font-sans antialiased text-gray-900">
-        <AppShell>{children}</AppShell>
-      </body>
+      <body className="font-sans antialiased text-gray-900">{conteudo}</body>
     </html>
   );
 }

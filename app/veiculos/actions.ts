@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { exigirAdmin, exigirAprovado } from "@/lib/auth";
 import { formatPlaca, isPlacaMercosul } from "@/components/ui/PlacaMercosul";
-import { senhaAdminValida } from "@/lib/admin";
 import type { VehicleStatus, VehicleTipo } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -39,6 +39,9 @@ function identificador(formData: FormData): { valor: string; error?: string } {
 }
 
 export async function createVehicle(formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const placa = identificador(formData);
   if (placa.error) return { error: placa.error };
 
@@ -76,6 +79,9 @@ export async function createVehicle(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updateVehicle(vehicleId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const placa = identificador(formData);
   if (placa.error) return { error: placa.error };
 
@@ -112,6 +118,9 @@ export async function updateVehicle(vehicleId: string, formData: FormData): Prom
 }
 
 export async function deleteVehicle(vehicleId: string): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("vehicles").delete().eq("id", vehicleId);
@@ -126,8 +135,11 @@ export async function deleteVehicle(vehicleId: string): Promise<ActionResult> {
 }
 
 export async function createMeasurement(vehicleId: string, formData: FormData): Promise<ActionResult> {
-  const placa = identificador(formData);
-  if (placa.error) return { error: placa.error };
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+  if (formData.get("correcao") === "on" && (await exigirAdmin())) {
+    return { error: "Somente o administrador pode lançar correção administrativa." };
+  }
 
   const supabase = await createClient();
 
@@ -162,8 +174,9 @@ export async function updateMeasurement(
   measurementId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const senha = senhaAdminValida((formData.get("senha") ?? "").toString());
-  if (!senha.ok) return { error: senha.error };
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
 
   const payload = {
     data_leitura: str(formData.get("data_leitura")),
@@ -194,8 +207,9 @@ export async function deleteMeasurement(
   measurementId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const senha = senhaAdminValida((formData.get("senha") ?? "").toString());
-  if (!senha.ok) return { error: senha.error };
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
 
   const supabase = await createClient();
   const { error } = await supabase.from("measurements").delete().eq("id", measurementId).eq("vehicle_id", vehicleId);

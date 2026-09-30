@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { exigirAdmin } from "@/lib/auth";
 
 type ActionResult = { error?: string; id?: string };
 
@@ -18,6 +19,9 @@ function num(v: FormDataEntryValue | null): number | null {
 }
 
 export async function createPlan(formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const payload = {
@@ -41,6 +45,9 @@ export async function createPlan(formData: FormData): Promise<ActionResult> {
 }
 
 export async function updatePlan(planId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const payload = {
@@ -62,6 +69,9 @@ export async function updatePlan(planId: string, formData: FormData): Promise<Ac
 }
 
 export async function linkPlanToVehicle(planId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const vehicleId = str(formData.get("vehicle_id"));
@@ -88,6 +98,9 @@ export async function linkPlanToVehicle(planId: string, formData: FormData): Pro
 }
 
 export async function unlinkVehiclePlan(planId: string, vehiclePlanId: string): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const { error } = await supabase

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdmin } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -35,6 +36,7 @@ type OrderWithRelations = MaintenanceOrder & { vehicles: Vehicle | null; supplie
 export default async function OrdemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  const admin = await isAdmin();
 
   const { data: order } = await supabase
     .from("maintenance_orders")
@@ -120,13 +122,18 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                 {order.status === "concluida"
                   ? `Ordem fechada em ${formatDate(order.data_conclusao)}.`
                   : "Ordem cancelada."}{" "}
-                Alterações de status exigem reabertura pelo administrador.
+                Alterações exigem reabertura pelo administrador.
               </p>
-              <ReopenOrderForm action={reopenOrder.bind(null, id)} />
+              {admin ? <ReopenOrderForm action={reopenOrder.bind(null, id)} /> : null}
             </div>
           ) : (
             <div className="space-y-4">
-              <OrderStatusForm currentStatus={order.status} dataPrevista={order.data_prevista} action={statusAction} />
+              <OrderStatusForm
+                currentStatus={order.status}
+                dataPrevista={order.data_prevista}
+                podeCancelar={admin}
+                action={statusAction}
+              />
               <div className="border-t border-gray-100 pt-4">
                 <CloseOrderForm
                   km={order.km}
@@ -167,7 +174,7 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                       key={item.id}
                       item={item}
                       updateAction={updateOrderItem.bind(null, id, item.id)}
-                      deleteAction={deleteOrderItem.bind(null, id, item.id)}
+                      deleteAction={admin ? deleteOrderItem.bind(null, id, item.id) : undefined}
                     />
                   ))}
                 </tbody>

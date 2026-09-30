@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { senhaAdminValida } from "@/lib/admin";
+import { exigirAdmin, exigirAprovado } from "@/lib/auth";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -40,6 +40,9 @@ async function resolveSupplierId(
 }
 
 export async function createOrder(formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const vehicleId = str(formData.get("vehicle_id"));
@@ -84,15 +87,21 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   return { id: data!.id };
 }
 
-// OS concluída ou cancelada só volta a andar pela reabertura com senha de administrador.
+// OS concluída ou cancelada só volta a andar pela reabertura feita pelo administrador.
 const STATUS_FINAIS: OrderStatus[] = ["concluida", "cancelada"];
 
 export async function updateOrderStatus(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const status = str(formData.get("status")) as OrderStatus | null;
   if (!status) return { error: "Selecione um status." };
   if (status === "concluida") return { error: "Use o botão \"Fechar ordem de serviço\" para concluir." };
+  if (status === "cancelada" && (await exigirAdmin())) {
+    return { error: "Somente o administrador pode cancelar ordem de serviço." };
+  }
 
   const { data: order } = await supabase
     .from("maintenance_orders")
@@ -102,7 +111,7 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
 
   if (!order) return { error: "Ordem não encontrada." };
   if (STATUS_FINAIS.includes(order.status)) {
-    return { error: "Ordem encerrada. Para alterar, reabra com a senha de administrador." };
+    return { error: "Ordem encerrada. Somente o administrador pode reabrir." };
   }
 
   const payload: Partial<MaintenanceOrder> = {
@@ -122,6 +131,9 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
 }
 
 export async function closeOrder(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const { data: order } = await supabase
@@ -185,6 +197,9 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
 }
 
 export async function updateOrderReadings(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const { data: order } = await supabase
@@ -195,7 +210,7 @@ export async function updateOrderReadings(orderId: string, formData: FormData): 
 
   if (!order) return { error: "Ordem não encontrada." };
   if (STATUS_FINAIS.includes(order.status)) {
-    return { error: "Ordem encerrada. Para alterar, reabra com a senha de administrador." };
+    return { error: "Ordem encerrada. Somente o administrador pode reabrir." };
   }
 
   const { error } = await supabase
@@ -209,8 +224,8 @@ export async function updateOrderReadings(orderId: string, formData: FormData): 
 }
 
 export async function reopenOrder(orderId: string, formData: FormData): Promise<ActionResult> {
-  const senha = senhaAdminValida((formData.get("senha") ?? "").toString());
-  if (!senha.ok) return { error: senha.error };
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
 
   const supabase = await createClient();
   const { data: order } = await supabase
@@ -240,6 +255,9 @@ function revalidateOrder(orderId: string, vehicleId: string) {
 }
 
 export async function updateOrderDescription(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const problemaServico = str(formData.get("problema_servico"));
@@ -257,6 +275,9 @@ export async function updateOrderDescription(orderId: string, formData: FormData
 }
 
 export async function updateOtherCosts(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
   const outrosCustos = num(formData.get("outros_custos")) ?? 0;
 
@@ -268,6 +289,9 @@ export async function updateOtherCosts(orderId: string, formData: FormData): Pro
 }
 
 export async function addOrderItem(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const descricao = str(formData.get("descricao"));
@@ -290,6 +314,9 @@ export async function addOrderItem(orderId: string, formData: FormData): Promise
 }
 
 export async function updateOrderItem(orderId: string, itemId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAprovado();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const descricao = str(formData.get("descricao"));
@@ -311,6 +338,9 @@ export async function updateOrderItem(orderId: string, itemId: string, formData:
 }
 
 export async function deleteOrderItem(orderId: string, itemId: string): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
   const { error } = await supabase.from("maintenance_order_items").delete().eq("id", itemId);
   if (error) return { error: `Não foi possível remover o item: ${error.message}` };

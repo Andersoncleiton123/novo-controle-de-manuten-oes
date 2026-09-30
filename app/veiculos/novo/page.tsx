@@ -1,10 +1,13 @@
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/auth";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { VehicleForm } from "@/components/vehicles/VehicleForm";
 import { createVehicle } from "@/app/veiculos/actions";
 import type { Vehicle, VehicleTipo } from "@/lib/types";
 
 export default async function NovoVeiculoPage({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
+  if (!(await isAdmin())) notFound();
   const { tipo } = await searchParams;
   const defaultTipo: VehicleTipo = tipo === "veiculo" ? "veiculo" : "betoneira";
   const supabase = await createClient();

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { MeasurementForm } from "@/components/vehicles/MeasurementForm";
@@ -28,6 +29,7 @@ export default async function NovaMedicaoPage({ params }: { params: Promise<{ id
         <CardHeader title="Registrar leitura de KM / horímetro" />
         <CardBody>
           <MeasurementForm
+            podeCorrigir={await isAdmin()}
             vehicleId={id}
             currentKm={vehicle.km_atual}
             currentHoras={vehicle.horimetro_atual}

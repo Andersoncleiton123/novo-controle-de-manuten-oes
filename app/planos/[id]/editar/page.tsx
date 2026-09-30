@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { PlanForm } from "@/components/plans/PlanForm";
@@ -6,6 +7,7 @@ import { updatePlan } from "@/app/planos/actions";
 import type { MaintenancePlan } from "@/lib/types";
 
 export default async function EditarPlanoPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!(await isAdmin())) notFound();
   const { id } = await params;
   const supabase = await createClient();
   const { data: plan } = await supabase.from("maintenance_plans").select("*").eq("id", id).single<MaintenancePlan>();

@@ -13,11 +13,18 @@ import {
   CircleDollarSign,
   Calendar,
   Settings,
+  ShieldCheck,
+  Users,
+  ScrollText,
+  LogOut,
   Menu,
   X,
 } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
+import { sair } from "@/app/login/actions";
+
+export type UsuarioShell = { email: string; nome: string | null; isAdmin: boolean };
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -29,6 +36,9 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   CircleDollarSign,
   Calendar,
   Settings,
+  ShieldCheck,
+  Users,
+  ScrollText,
 };
 
 function isActive(href: string, pathname: string, search: URLSearchParams | null) {
@@ -40,24 +50,26 @@ function isActive(href: string, pathname: string, search: URLSearchParams | null
   return Array.from(new URLSearchParams(query)).every(([k, v]) => search.get(k) === v);
 }
 
-function NavLinksWithSearch({ onNavigate }: { onNavigate?: () => void }) {
+type NavProps = { onNavigate?: () => void; isAdmin: boolean };
+
+function NavLinksWithSearch(props: NavProps) {
   const searchParams = useSearchParams();
-  return <NavLinksBase onNavigate={onNavigate} search={searchParams} />;
+  return <NavLinksBase {...props} search={searchParams} />;
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks(props: NavProps) {
   return (
-    <Suspense fallback={<NavLinksBase onNavigate={onNavigate} search={null} />}>
-      <NavLinksWithSearch onNavigate={onNavigate} />
+    <Suspense fallback={<NavLinksBase {...props} search={null} />}>
+      <NavLinksWithSearch {...props} />
     </Suspense>
   );
 }
 
-function NavLinksBase({ onNavigate, search }: { onNavigate?: () => void; search: URLSearchParams | null }) {
+function NavLinksBase({ onNavigate, search, isAdmin }: NavProps & { search: URLSearchParams | null }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => isAdmin || !item.admin).map((item) => {
         const Icon = ICONS[item.icon];
         const active = isActive(item.href, pathname, search);
         return (
@@ -81,7 +93,27 @@ function NavLinksBase({ onNavigate, search }: { onNavigate?: () => void; search:
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function UsuarioBox({ usuario }: { usuario: UsuarioShell }) {
+  return (
+    <div className="border-t border-gray-100 px-4 py-3">
+      <p className="truncate text-sm font-medium text-gray-900">{usuario.nome ?? usuario.email}</p>
+      <p className="truncate text-xs text-gray-500">
+        {usuario.email} · {usuario.isAdmin ? "Administrador" : "Consultor"}
+      </p>
+      <form action={sair} className="mt-2">
+        <button
+          type="submit"
+          className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sair
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export function AppShell({ children, usuario }: { children: React.ReactNode; usuario: UsuarioShell }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -96,7 +128,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-xs text-gray-500">Controle de Manutenção</p>
           </div>
         </div>
-        <NavLinks />
+        <NavLinks isAdmin={usuario.isAdmin} />
+        <UsuarioBox usuario={usuario} />
       </aside>
 
       {/* Mobile top bar */}
@@ -130,7 +163,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks onNavigate={() => setOpen(false)} />
+            <NavLinks isAdmin={usuario.isAdmin} onNavigate={() => setOpen(false)} />
+            <UsuarioBox usuario={usuario} />
           </div>
         </div>
       ) : null}

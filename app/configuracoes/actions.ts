@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { exigirAdmin } from "@/lib/auth";
 
 type ActionResult = { error?: string };
 
@@ -11,6 +12,9 @@ function num(v: FormDataEntryValue | null, fallback: number): number {
 }
 
 export async function updateAlertSettings(formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
   const supabase = await createClient();
 
   const payload = {

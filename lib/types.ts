@@ -258,6 +258,27 @@ export type DashboardSummary = {
   custo_mes: number;
 };
 
+export type Profile = {
+  id: string;
+  email: string;
+  nome: string | null;
+  perfil: "admin" | "consultor";
+  aprovado: boolean;
+  created_at: string;
+};
+
+export type AuditLogEntry = {
+  id: number;
+  created_at: string;
+  user_id: string | null;
+  user_email: string | null;
+  tabela: string;
+  acao: "INSERT" | "UPDATE" | "DELETE";
+  registro_id: string | null;
+  antes: Record<string, unknown> | null;
+  depois: Record<string, unknown> | null;
+};
+
 // Minimal Database generic so supabase-js typing compiles. Not exhaustive
 // (legacy tables/views from before V1 are intentionally omitted).
 //
@@ -325,6 +346,8 @@ export type Database = {
         Update: Partial<AlertSettings>;
         Relationships: [];
       };
+      profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile>; Relationships: [] };
+      audit_log: { Row: AuditLogEntry; Insert: Partial<AuditLogEntry>; Update: Partial<AuditLogEntry>; Relationships: [] };
       maintenance_history: {
         Row: MaintenanceHistoryEntry;
         Insert: Partial<MaintenanceHistoryEntry>;

@@ -12,11 +12,13 @@ export function MeasurementForm({
   vehicleId,
   currentKm,
   currentHoras,
+  podeCorrigir,
   action,
 }: {
   vehicleId: string;
   currentKm: number;
   currentHoras: number;
+  podeCorrigir: boolean;
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -64,6 +66,7 @@ export function MeasurementForm({
         <Textarea id="observacao" name="observacao" rows={2} />
       </FieldGroup>
 
+      {podeCorrigir ? (
       <label className="flex items-start gap-2 text-sm text-gray-600">
         <input
           type="checkbox"
@@ -77,6 +80,7 @@ export function MeasurementForm({
           corrigir um erro de cadastro)
         </span>
       </label>
+      ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="submit" disabled={pending}>
