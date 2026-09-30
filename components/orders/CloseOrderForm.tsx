@@ -65,7 +65,7 @@ export function CloseOrderForm({
       <FieldGroup
         label="Plano preventivo atendido"
         htmlFor="vehicle_maintenance_plan_id"
-        hint="A próxima troca conta a partir da data de abertura desta OS, com o KM e o horímetro acima"
+        hint="A data, o KM e o horímetro acima passam a ser a última execução do plano"
       >
         <Select id="vehicle_maintenance_plan_id" name="vehicle_maintenance_plan_id" defaultValue={planoAtualId ?? ""}>
           <option value="">Nenhum</option>

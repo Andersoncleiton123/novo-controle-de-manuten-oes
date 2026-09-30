@@ -29,7 +29,6 @@ export function OrderForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [tipo, setTipo] = useState(defaultTipo ?? "corretiva");
   const [pending, startTransition] = useTransition();
 
   return (
@@ -71,7 +70,7 @@ export function OrderForm({
           </Select>
         </FieldGroup>
         <FieldGroup label="Tipo" htmlFor="tipo" required>
-          <Select id="tipo" name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value as "preventiva" | "corretiva")}>
+          <Select id="tipo" name="tipo" defaultValue={defaultTipo ?? "corretiva"}>
             {Object.entries(ORDER_TIPO_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -107,16 +106,6 @@ export function OrderForm({
           <Input id="responsavel" name="responsavel" />
         </FieldGroup>
       </div>
-
-      {tipo === "preventiva" && !vehicleMaintenancePlanId ? (
-        <label className="flex items-start gap-2 text-sm text-gray-700">
-          <input type="checkbox" name="troca_fluidos" className="mt-0.5" />
-          <span>
-            Esta OS registra troca de óleo do motor (caminhão) ou de fluidos (betoneira). A próxima troca passa a
-            contar a partir da data, do KM e do horímetro desta OS.
-          </span>
-        </label>
-      ) : null}
 
       <FieldGroup label="Problema / serviço" htmlFor="problema_servico" required>
         <Textarea id="problema_servico" name="problema_servico" rows={3} required defaultValue={defaultProblemaServico ?? ""} />

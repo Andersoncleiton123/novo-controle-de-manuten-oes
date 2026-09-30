@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { senhaAdminValida } from "@/lib/admin";
-import { planoTrocaFluidosId, syncPlanBaseline } from "@/lib/planBaseline";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -51,14 +50,7 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
 
   const fornecedorId = await resolveSupplierId(supabase, str(formData.get("fornecedor")));
   const correctiveIssueId = str(formData.get("corrective_issue_id"));
-  let vehicleMaintenancePlanId = str(formData.get("vehicle_maintenance_plan_id"));
-  const trocaFluidos = formData.get("troca_fluidos") === "on";
-  if (trocaFluidos && !vehicleMaintenancePlanId) {
-    vehicleMaintenancePlanId = await planoTrocaFluidosId(supabase, vehicleId);
-    if (!vehicleMaintenancePlanId) {
-      return { error: "Este veículo não tem plano de troca de óleo/fluidos ativo." };
-    }
-  }
+  const vehicleMaintenancePlanId = str(formData.get("vehicle_maintenance_plan_id"));
 
   const payload = {
     vehicle_id: vehicleId,
@@ -76,28 +68,8 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
     observacoes: str(formData.get("observacoes")),
   };
 
-  if (vehicleMaintenancePlanId && payload.km === null && payload.horas === null) {
-    return { error: "Informe o KM ou o horímetro: a próxima troca é contada a partir desta OS." };
-  }
-
-  // Registra a leitura da abertura: o banco recusa KM/horímetro fora de ordem com as medições do veículo.
-  if (payload.km !== null || payload.horas !== null) {
-    const { error: leituraError } = await supabase.from("measurements").insert({
-      vehicle_id: vehicleId,
-      km: payload.km,
-      horas: payload.horas,
-      data_leitura: payload.data_abertura,
-      observacao: "Registrado ao abrir ordem de serviço",
-    });
-    if (leituraError) {
-      return { error: `KM/horímetro não conferem com as medições do veículo: ${leituraError.message}` };
-    }
-  }
-
   const { data, error } = await supabase.from("maintenance_orders").insert(payload).select("id").single();
   if (error) return { error: `Não foi possível criar a ordem: ${error.message}` };
-
-  await syncPlanBaseline(supabase, vehicleMaintenancePlanId);
 
   if (correctiveIssueId) {
     await supabase
@@ -140,8 +112,6 @@ export async function updateOrderStatus(orderId: string, formData: FormData): Pr
 
   const { error } = await supabase.from("maintenance_orders").update(payload).eq("id", orderId);
   if (error) return { error: `Não foi possível atualizar a ordem: ${error.message}` };
-
-  if (status === "cancelada") await syncPlanBaseline(supabase, order.vehicle_maintenance_plan_id);
 
   if (status === "aguardando_peca" || status === "em_execucao") {
     await supabase.from("vehicles").update({ status: "em_manutencao" }).eq("id", order.vehicle_id);
@@ -200,9 +170,13 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
     .eq("id", orderId);
   if (error) return { error: `Não foi possível fechar a ordem: ${error.message}` };
 
-  // Plano atendido conta a partir desta OS; se a OS trocou de plano, o anterior volta à OS dele.
-  await syncPlanBaseline(supabase, planId);
-  if (order.vehicle_maintenance_plan_id !== planId) await syncPlanBaseline(supabase, order.vehicle_maintenance_plan_id);
+  // Fecha o ciclo preventivo: usa esta execução como nova base do plano.
+  if (planId) {
+    await supabase
+      .from("vehicle_maintenance_plans")
+      .update({ ultima_execucao_data: dataConclusao, ultima_execucao_km: km, ultima_execucao_horas: horas })
+      .eq("id", planId);
+  }
   if (order.corrective_issue_id) {
     await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
   }
@@ -215,7 +189,7 @@ export async function updateOrderReadings(orderId: string, formData: FormData): 
 
   const { data: order } = await supabase
     .from("maintenance_orders")
-    .select("id, vehicle_id, status, vehicle_maintenance_plan_id")
+    .select("id, vehicle_id, status")
     .eq("id", orderId)
     .single();
 
@@ -229,8 +203,6 @@ export async function updateOrderReadings(orderId: string, formData: FormData): 
     .update({ km: num(formData.get("km")), horas: num(formData.get("horas")) })
     .eq("id", orderId);
   if (error) return { error: `Não foi possível salvar KM e horímetro: ${error.message}` };
-
-  await syncPlanBaseline(supabase, order.vehicle_maintenance_plan_id);
 
   revalidateOrder(orderId, order.vehicle_id);
   return { id: orderId };
