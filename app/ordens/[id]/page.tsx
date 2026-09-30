@@ -140,6 +140,7 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                   horas={order.horas}
                   planos={(planos ?? []).map((p) => ({ id: p.id, nome: p.maintenance_plans.nome }))}
                   planoAtualId={order.vehicle_maintenance_plan_id}
+                  preventiva={order.tipo === "preventiva"}
                   action={closeOrder.bind(null, id)}
                 />
               </div>

@@ -154,6 +154,16 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
   if (planId && km === null && horas === null) {
     return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
   }
+  if (!planId && order.tipo === "preventiva") {
+    const { count } = await supabase
+      .from("vehicle_maintenance_plans")
+      .select("id", { count: "exact", head: true })
+      .eq("vehicle_id", order.vehicle_id)
+      .eq("ativo", true);
+    if ((count ?? 0) > 0) {
+      return { error: "Selecione o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
+    }
+  }
 
   // Registra a leitura da execução antes de fechar: o banco recusa KM/horímetro fora de ordem
   // em relação às medições anteriores e seguintes do veículo.
@@ -197,10 +207,14 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
 
   // Fecha o ciclo preventivo: usa esta execução como nova base do plano.
   if (planId) {
-    await supabase
+    const { error: planoError } = await supabase
       .from("vehicle_maintenance_plans")
       .update({ ultima_execucao_data: dataConclusao, ultima_execucao_km: km, ultima_execucao_horas: horas })
       .eq("id", planId);
+    if (planoError) {
+      revalidateOrder(orderId, order.vehicle_id);
+      return { error: `Ordem fechada, mas o plano preventivo não foi atualizado: ${planoError.message}` };
+    }
   }
   if (order.corrective_issue_id) {
     await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
