@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Select } from "@/components/ui/Field";
+import { Input, Select } from "@/components/ui/Field";
+import { formatPlaca } from "@/components/ui/PlacaMercosul";
 import { formatDate } from "@/lib/format";
 import {
   ORDER_STATUS_COLOR,
@@ -23,9 +24,10 @@ type OrderWithVehicle = MaintenanceOrder & { vehicles: Pick<Vehicle, "nome" | "i
 export default async function OrdensPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; tipo?: string; categoria?: string }>;
+  searchParams: Promise<{ status?: string; tipo?: string; categoria?: string; placa?: string }>;
 }) {
-  const { status, tipo, categoria: categoriaParam } = await searchParams;
+  const { status, tipo, categoria: categoriaParam, placa: placaParam } = await searchParams;
+  const placa = placaParam ? formatPlaca(placaParam) : "";
   const categoria = categoriaParam === "betoneira" || categoriaParam === "veiculo" ? categoriaParam : undefined;
   const supabase = await createClient();
 
@@ -43,6 +45,23 @@ export default async function OrdensPage({
   if (tipo) query = query.eq("tipo", tipo as OrderTipo);
   if (categoria) query = query.eq("vehicles.tipo", categoria as VehicleTipo);
 
+  // Placa (completa ou parte dela): OS do caminhão e da betoneira montada nele.
+  let placaSemResultado = false;
+  if (placa) {
+    const { data: caminhoes } = await supabase
+      .from("vehicles")
+      .select("id")
+      .eq("tipo", "veiculo")
+      .ilike("identificador", `%${placa}%`);
+    const caminhaoIds = (caminhoes ?? []).map((c) => c.id);
+    const { data: betoneiras } = caminhaoIds.length
+      ? await supabase.from("vehicles").select("id").in("caminhao_id", caminhaoIds)
+      : { data: [] as { id: string }[] };
+    const ids = [...caminhaoIds, ...(betoneiras ?? []).map((b) => b.id)];
+    if (ids.length) query = query.in("vehicle_id", ids);
+    else placaSemResultado = true;
+  }
+
   const titulo =
     categoria === "betoneira"
       ? "Ordens de manutenção — Betoneiras"
@@ -50,7 +69,8 @@ export default async function OrdensPage({
         ? "Ordens de manutenção — Caminhões"
         : "Ordens de manutenção";
 
-  const { data: orders } = await query.returns<OrderWithVehicle[]>();
+  const { data: ordersData } = placaSemResultado ? { data: [] } : await query.returns<OrderWithVehicle[]>();
+  const orders = ordersData as OrderWithVehicle[] | null;
 
   return (
     <div className="space-y-5">
@@ -64,6 +84,13 @@ export default async function OrdensPage({
 
       <Card className="p-4">
         <form className="flex flex-col gap-3 sm:flex-row" method="get">
+          <Input
+            name="placa"
+            defaultValue={placa}
+            placeholder="Placa (ex.: RQL4D33)"
+            aria-label="Buscar por placa"
+            className="font-mono uppercase sm:w-48"
+          />
           <Select name="status" defaultValue={status ?? ""} className="sm:w-56">
             <option value="">Todos os status</option>
             {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => (
@@ -95,7 +122,7 @@ export default async function OrdensPage({
       </Card>
 
       {!orders || orders.length === 0 ? (
-        <EmptyState title="Nenhuma ordem encontrada" />
+        <EmptyState title={placa ? `Nenhuma ordem encontrada para a placa ${placa}` : "Nenhuma ordem encontrada"} />
       ) : (
         <Card className="p-0">
           <ul className="divide-y divide-gray-100">
