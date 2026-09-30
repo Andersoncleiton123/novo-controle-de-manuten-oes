@@ -346,6 +346,12 @@ export type Database = {
         Update: Partial<AlertSettings>;
         Relationships: [];
       };
+      app_config: {
+        Row: { id: number; login_obrigatorio: boolean };
+        Insert: { id?: number; login_obrigatorio?: boolean };
+        Update: { login_obrigatorio?: boolean };
+        Relationships: [];
+      };
       profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile>; Relationships: [] };
       audit_log: { Row: AuditLogEntry; Insert: Partial<AuditLogEntry>; Update: Partial<AuditLogEntry>; Relationships: [] };
       maintenance_history: {

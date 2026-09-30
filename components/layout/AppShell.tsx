@@ -24,7 +24,7 @@ import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 import { sair } from "@/app/login/actions";
 
-export type UsuarioShell = { email: string; nome: string | null; isAdmin: boolean };
+export type UsuarioShell = { email: string; nome: string | null; isAdmin: boolean; acessoLivre?: boolean };
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -94,6 +94,13 @@ function NavLinksBase({ onNavigate, search, isAdmin }: NavProps & { search: URLS
 }
 
 function UsuarioBox({ usuario }: { usuario: UsuarioShell }) {
+  if (usuario.acessoLivre) {
+    return (
+      <div className="border-t border-gray-100 px-4 py-3">
+        <p className="text-xs text-gray-500">Acesso livre — login desativado</p>
+      </div>
+    );
+  }
   return (
     <div className="border-t border-gray-100 px-4 py-3">
       <p className="truncate text-sm font-medium text-gray-900">{usuario.nome ?? usuario.email}</p>

@@ -28,8 +28,16 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Chave no banco: com login desligado, ninguém é mandado para /login.
+  const { data: config, error: configError } = await supabase
+    .from("app_config")
+    .select("login_obrigatorio")
+    .eq("id", 1)
+    .maybeSingle();
+  const exigeLogin = configError || !config ? true : config.login_obrigatorio;
+
   const publica = ROTAS_PUBLICAS.some((r) => request.nextUrl.pathname.startsWith(r));
-  if (!user && !publica) {
+  if (exigeLogin && !user && !publica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
