@@ -48,11 +48,16 @@ export default async function DashboardPage() {
       .returns<VehiclePlanStatus[]>(),
     supabase
       .from("vehicles")
-      .select("id, numero_interno, identificador, nome, status, cliente_atual, local_atual")
+      .select("id, numero_interno, identificador, nome, status, cliente_atual, local_atual, km_atual, horimetro_atual")
       .eq("tipo", "veiculo")
       .neq("status", "desmobilizado")
       .order("nome")
-      .returns<Pick<Vehicle, "id" | "numero_interno" | "identificador" | "nome" | "status" | "cliente_atual" | "local_atual">[]>(),
+      .returns<
+        Pick<
+          Vehicle,
+          "id" | "numero_interno" | "identificador" | "nome" | "status" | "cliente_atual" | "local_atual" | "km_atual" | "horimetro_atual"
+        >[]
+      >(),
   ]);
 
   // Última medição de cada caminhão da frota ativa.
@@ -68,14 +73,15 @@ export default async function DashboardPage() {
   const ultimaMedicao = new Map<string, string>();
   for (const m of medicoes ?? []) if (!ultimaMedicao.has(m.vehicle_id)) ultimaMedicao.set(m.vehicle_id, m.data_leitura);
   const hoje = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`).getTime();
-  const semMedicao = (fleetVehicles ?? [])
+  // Todos os caminhões com a data da última medição, do mais atrasado para o mais recente.
+  const medicoesFrota = (fleetVehicles ?? [])
     .map((v) => {
       const data = ultimaMedicao.get(v.id) ?? null;
       const dias = data ? Math.floor((hoje - new Date(`${data}T00:00:00Z`).getTime()) / 86_400_000) : null;
-      return { ...v, data, dias };
+      return { ...v, data, dias, pendente: dias === null || dias > DIAS_SEM_MEDICAO };
     })
-    .filter((v) => v.dias === null || v.dias > DIAS_SEM_MEDICAO)
     .sort((a, b) => (b.dias ?? Infinity) - (a.dias ?? Infinity));
+  const pendentes = medicoesFrota.filter((v) => v.pendente).length;
 
   const sortedAlerts = (alerts ?? []).sort(
     (a, b) => (NIVEL_ORDER[a.nivel] ?? 9) - (NIVEL_ORDER[b.nivel] ?? 9),
@@ -126,39 +132,51 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {semMedicao.length > 0 ? (
-        <Card className="border-amber-200">
-          <CardHeader
-            title={`Medição semanal pendente (${semMedicao.length})`}
-            subtitle={`Caminhões sem medição de KM/horímetro há mais de ${DIAS_SEM_MEDICAO} dias — a contagem para a próxima troca fica parada`}
-          />
-          <CardBody className="p-0">
+      <Card className={pendentes > 0 ? "border-amber-200" : undefined}>
+        <CardHeader
+          title="Última medição por caminhão"
+          subtitle={
+            pendentes > 0
+              ? `${pendentes} caminhão(ões) sem medição há mais de ${DIAS_SEM_MEDICAO} dias — a contagem para a próxima troca fica parada`
+              : `Todos os caminhões com medição nos últimos ${DIAS_SEM_MEDICAO} dias`
+          }
+        />
+        <CardBody className="p-0">
+          {medicoesFrota.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="Nenhum caminhão cadastrado" />
+            </div>
+          ) : (
             <ul className="divide-y divide-gray-100">
-              {semMedicao.map((v) => (
+              {medicoesFrota.map((v) => (
                 <li key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
+                  <Link href={`/veiculos/${v.id}`} className="flex min-w-0 items-center gap-3 hover:text-brand-700">
                     <PlacaMercosul placa={v.identificador} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-gray-900">{v.nome ?? v.identificador}</p>
-                      <p className="text-xs text-amber-700">
+                      <p className={`text-xs ${v.pendente ? "text-amber-700" : "text-gray-500"}`}>
                         {v.data
-                          ? `Última medição em ${formatDate(v.data)} · há ${v.dias} dias`
+                          ? `${formatDate(v.data)} · ${v.dias === 0 ? "hoje" : v.dias === 1 ? "há 1 dia" : `há ${v.dias} dias`} · ${formatKm(v.km_atual)} · ${formatHoras(v.horimetro_atual)}`
                           : "Nenhuma medição registrada"}
                       </p>
                     </div>
-                  </div>
-                  <Link
-                    href={`/veiculos/${v.id}/medicao`}
-                    className="shrink-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Lançar medição
                   </Link>
+                  {v.pendente ? (
+                    <Link
+                      href={`/veiculos/${v.id}/medicao`}
+                      className="shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                    >
+                      Lançar medição
+                    </Link>
+                  ) : (
+                    <Badge className="bg-green-100 text-green-700">Em dia</Badge>
+                  )}
                 </li>
               ))}
             </ul>
-          </CardBody>
-        </Card>
-      ) : null}
+          )}
+        </CardBody>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
