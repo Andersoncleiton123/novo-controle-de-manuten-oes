@@ -13,6 +13,15 @@ export type UsuarioAtual = {
   emailConfirmado: boolean;
 };
 
+// Chave no banco (app_config.login_obrigatorio). Desligada: acesso livre, todos com
+// permissões de administrador. Sem a tabela ou em caso de erro, login continua obrigatório.
+export const loginObrigatorio = cache(async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("app_config").select("login_obrigatorio").eq("id", 1).maybeSingle();
+  if (error || !data) return true;
+  return data.login_obrigatorio;
+});
+
 export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual | null> => {
   const supabase = await createClient();
   const {
@@ -37,12 +46,14 @@ export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual | null> => {
 });
 
 export async function isAdmin(): Promise<boolean> {
+  if (!(await loginObrigatorio())) return true;
   const u = await getUsuarioAtual();
   return Boolean(u && u.aprovado && u.emailConfirmado && u.perfil === "admin");
 }
 
 // Retorna a mensagem de erro para a server action, ou null quando o acesso é permitido.
 export async function exigirAprovado(): Promise<string | null> {
+  if (!(await loginObrigatorio())) return null;
   const u = await getUsuarioAtual();
   if (!u) return "Sessão expirada. Entre novamente.";
   if (!u.aprovado || !u.emailConfirmado) return "Seu acesso ainda não foi aprovado pelo administrador.";

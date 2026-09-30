@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/layout/AppShell";
-import { getUsuarioAtual, isAdmin } from "@/lib/auth";
+import { getUsuarioAtual, isAdmin, loginObrigatorio } from "@/lib/auth";
 import { sair } from "@/app/login/actions";
 import "./globals.css";
 
@@ -32,7 +32,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const usuario = await getUsuarioAtual();
 
   let conteudo: React.ReactNode;
-  if (!usuario) {
+  if (!(await loginObrigatorio())) {
+    // Acesso livre enquanto a chave de login estiver desligada.
+    conteudo = (
+      <AppShell usuario={{ email: usuario?.email ?? "", nome: usuario?.nome ?? null, isAdmin: true, acessoLivre: !usuario }}>
+        {children}
+      </AppShell>
+    );
+  } else if (!usuario) {
     // Telas de login (o proxy manda para /login quem não está logado).
     conteudo = children;
   } else if (!usuario.aprovado || !usuario.emailConfirmado) {
