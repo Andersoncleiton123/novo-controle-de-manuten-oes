@@ -138,7 +138,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
         </div>
         <div className="flex flex-wrap gap-2">
           <LinkButton href={`/veiculos/${caminhao?.id ?? id}/medicao`} variant="secondary" size="sm">
-            {caminhao ? "Atualizar medição do caminhão" : "Atualizar medição"}
+            {caminhao ? "Atualizar KM / horímetro do caminhão" : "Atualizar KM / horímetro"}
           </LinkButton>
           <LinkButton href={`/problemas/novo?veiculo=${id}`} variant="secondary" size="sm">
             Registrar problema

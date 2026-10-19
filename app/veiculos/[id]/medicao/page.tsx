@@ -22,7 +22,7 @@ export default async function NovaMedicaoPage({ params }: { params: Promise<{ id
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Atualizar medição</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Atualizar KM / horímetro</h1>
         <p className="text-sm text-gray-500">{vehicle.nome ?? vehicle.identificador}</p>
       </div>
       <Card>
