@@ -161,16 +161,19 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                   </Link>
-                  {v.pendente ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {v.pendente ? null : <Badge className="bg-green-100 text-green-700">Em dia</Badge>}
                     <Link
                       href={`/veiculos/${v.id}/medicao`}
-                      className="shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                      className={
+                        v.pendente
+                          ? "rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                          : "rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      }
                     >
-                      Lançar medição
+                      {v.pendente ? "Lançar medição" : "Atualizar"}
                     </Link>
-                  ) : (
-                    <Badge className="bg-green-100 text-green-700">Em dia</Badge>
-                  )}
+                  </div>
                 </li>
               ))}
             </ul>

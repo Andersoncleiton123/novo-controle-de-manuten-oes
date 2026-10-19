@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { isAdmin } from "@/lib/auth";
-import { Pencil } from "lucide-react";
+import { Gauge, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
@@ -199,6 +199,15 @@ export default async function VeiculosPage({
                   </div>
                 ) : null}
               </Link>
+              <div className="mt-3 border-t border-gray-100 pt-2">
+                <Link
+                  href={`/veiculos/${leituras.id}/medicao`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Gauge className="h-3.5 w-3.5" />
+                  {caminhao ? "Atualizar KM / horímetro do caminhão" : "Atualizar KM / horímetro"}
+                </Link>
+              </div>
             </Card>
             );
           })}
