@@ -95,6 +95,18 @@ export default async function DashboardPage() {
     return da - db;
   });
 
+  // Planos da betoneira (pela numeração BT) separados dos planos do caminhão (pela placa).
+  const { data: betoneiras } = await supabase
+    .from("vehicles")
+    .select("id")
+    .eq("tipo", "betoneira")
+    .returns<{ id: string }[]>();
+  const idsBetoneira = new Set((betoneiras ?? []).map((b) => b.id));
+  const gruposPlanos = [
+    { titulo: "Caminhões", itens: sortedPlanStatus.filter((p) => !idsBetoneira.has(p.vehicle_id)) },
+    { titulo: "Betoneiras", itens: sortedPlanStatus.filter((p) => idsBetoneira.has(p.vehicle_id)) },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -218,8 +230,16 @@ export default async function DashboardPage() {
                 <EmptyState title="Nenhuma manutenção próxima" description="Nenhum plano vencendo em breve." />
               </div>
             ) : (
+              gruposPlanos.map((grupo) => (
+                <div key={grupo.titulo}>
+                  <p className="border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {grupo.titulo}
+                  </p>
+                  {grupo.itens.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-gray-500">Nenhuma manutenção próxima ou atrasada.</p>
+                  ) : (
               <ul className="divide-y divide-gray-100">
-                {sortedPlanStatus.map((p) => (
+                {grupo.itens.map((p) => (
                   <li key={p.vehicle_plan_id} className="px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <Link
@@ -227,9 +247,7 @@ export default async function DashboardPage() {
                         className="flex min-w-0 items-center gap-2 text-sm font-medium text-gray-900 hover:text-brand-700"
                       >
                         <PlacaMercosul placa={p.vehicle_placa} />
-                        <span className="truncate">
-                          {p.vehicle_numero_interno ?? p.vehicle_nome} · {p.plano_nome}
-                        </span>
+                        <span className="truncate">{p.plano_nome}</span>
                       </Link>
                       <Badge className={NIVEL_ALERTA_COLOR[p.nivel_alerta]}>
                         {NIVEL_ALERTA_LABEL[p.nivel_alerta]}
@@ -244,6 +262,9 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
+                  )}
+                </div>
+              ))
             )}
           </CardBody>
         </Card>
