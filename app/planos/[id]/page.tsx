@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PlacaMercosul } from "@/components/ui/PlacaMercosul";
 import { LinkVehicleForm } from "@/components/plans/LinkVehicleForm";
 import { UnlinkButton } from "@/components/plans/UnlinkButton";
 import { linkPlanToVehicle, unlinkVehiclePlan } from "@/app/planos/actions";
@@ -83,9 +84,13 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {linkedVehicles.map((v) => (
+              {[...linkedVehicles]
+                .sort((a, b) => a.vehicle_placa.localeCompare(b.vehicle_placa, "pt-BR", { numeric: true }))
+                .map((v) => (
                 <li key={v.vehicle_plan_id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <PlacaMercosul placa={v.vehicle_placa} />
+                    <div className="min-w-0">
                     <Link href={`/veiculos/${v.vehicle_id}`} className="text-sm font-medium text-gray-900 hover:text-brand-700">
                       {v.vehicle_nome ?? v.vehicle_placa}
                     </Link>
@@ -94,6 +99,7 @@ export default async function PlanoDetailPage({ params }: { params: Promise<{ id
                       {v.ultima_execucao_km !== null ? ` · ${formatKm(v.ultima_execucao_km)}` : ""}
                       {v.ultima_execucao_horas !== null ? ` · ${formatHoras(v.ultima_execucao_horas)}` : ""}
                     </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={NIVEL_ALERTA_COLOR[v.nivel_alerta]}>{NIVEL_ALERTA_LABEL[v.nivel_alerta]}</Badge>

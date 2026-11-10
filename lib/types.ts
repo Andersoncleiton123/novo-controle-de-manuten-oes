@@ -147,6 +147,13 @@ export type MaintenanceOrder = {
   updated_at: string;
 };
 
+// Planos preventivos atendidos por uma OS (pode ser mais de um).
+export type MaintenanceOrderPlan = {
+  order_id: string;
+  vehicle_plan_id: string;
+  created_at: string;
+};
+
 export type MaintenanceOrderItem = {
   id: string;
   order_id: string;
@@ -332,6 +339,12 @@ export type Database = {
         Row: MaintenanceOrderItem;
         Insert: Partial<MaintenanceOrderItem>;
         Update: Partial<MaintenanceOrderItem>;
+        Relationships: [];
+      };
+      maintenance_order_plans: {
+        Row: MaintenanceOrderPlan;
+        Insert: Partial<MaintenanceOrderPlan>;
+        Update: Partial<MaintenanceOrderPlan>;
         Relationships: [];
       };
       attachments: {

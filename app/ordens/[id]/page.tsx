@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { OrderStatusForm } from "@/components/orders/OrderStatusForm";
 import { CloseOrderForm } from "@/components/orders/CloseOrderForm";
 import { ReopenOrderForm } from "@/components/orders/ReopenOrderForm";
+import { CorrectOrderForm } from "@/components/orders/CorrectOrderForm";
 import { ItemForm } from "@/components/orders/ItemForm";
 import { EditableItemRow } from "@/components/orders/EditableItemRow";
 import { EditableDescription } from "@/components/orders/EditableDescription";
@@ -18,6 +19,7 @@ import { OtherCostsForm } from "@/components/orders/OtherCostsForm";
 import {
   addOrderItem,
   closeOrder,
+  correctClosedOrder,
   deleteOrderItem,
   reopenOrder,
   updateOrderItem,
@@ -65,6 +67,17 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
 
   const encerrada = order.status === "concluida" || order.status === "cancelada";
   const planosOpcoes = (planos ?? []).map((p) => ({ id: p.id, nome: p.maintenance_plans.nome }));
+
+  const { data: vinculos } = await supabase
+    .from("maintenance_order_plans")
+    .select("vehicle_plan_id")
+    .eq("order_id", id)
+    .returns<{ vehicle_plan_id: string }[]>();
+  const planosMarcados = (vinculos ?? []).map((v) => v.vehicle_plan_id);
+  if (planosMarcados.length === 0 && order.vehicle_maintenance_plan_id) {
+    planosMarcados.push(order.vehicle_maintenance_plan_id);
+  }
+  const planosAtendidosNomes = planosOpcoes.filter((p) => planosMarcados.includes(p.id)).map((p) => p.nome);
 
   const totalPecas = (items ?? []).reduce((acc, i) => acc + Number(i.quantidade) * Number(i.valor_unitario), 0);
   const totalServico = (items ?? []).reduce((acc, i) => acc + Number(i.mao_de_obra), 0);
@@ -143,7 +156,29 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                   : "Ordem cancelada."}{" "}
                 Alterações exigem reabertura pelo administrador.
               </p>
-              {admin ? <ReopenOrderForm action={reopenOrder.bind(null, id)} /> : null}
+              {order.status === "concluida" ? (
+                <p className="text-sm text-gray-600">
+                  Planos atendidos:{" "}
+                  {planosAtendidosNomes.length > 0 ? (
+                    planosAtendidosNomes.join(", ")
+                  ) : (
+                    <span className="text-amber-700">nenhum</span>
+                  )}
+                </p>
+              ) : null}
+              {admin ? (
+                <div className="flex flex-wrap items-start gap-2">
+                  <ReopenOrderForm action={reopenOrder.bind(null, id)} />
+                  {order.status === "concluida" ? (
+                    <CorrectOrderForm
+                      tipo={order.tipo}
+                      planos={planosOpcoes}
+                      planosMarcados={planosMarcados}
+                      action={correctClosedOrder.bind(null, id)}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="space-y-4">
@@ -158,8 +193,9 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                   km={order.km}
                   horas={order.horas}
                   planos={planosOpcoes}
-                  planoAtualId={order.vehicle_maintenance_plan_id}
+                  planosMarcados={planosMarcados}
                   preventiva={order.tipo === "preventiva"}
+                  descricao={order.problema_servico}
                   action={closeOrder.bind(null, id)}
                 />
               </div>
