@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirAprovado } from "@/lib/auth";
+import { pareceRevisao } from "@/lib/orders";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -150,18 +151,23 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
 
   const km = num(formData.get("km"));
   const horas = num(formData.get("horas"));
-  const planId = str(formData.get("vehicle_maintenance_plan_id"));
-  if (planId && km === null && horas === null) {
+  const planIds = await planosDoVeiculo(supabase, order.vehicle_id, formData);
+  if (planIds.length > 0 && km === null && horas === null) {
     return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
   }
-  if (!planId && order.tipo === "preventiva") {
+  if (planIds.length === 0) {
     const { count } = await supabase
       .from("vehicle_maintenance_plans")
       .select("id", { count: "exact", head: true })
       .eq("vehicle_id", order.vehicle_id)
       .eq("ativo", true);
     if ((count ?? 0) > 0) {
-      return { error: "Selecione o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
+      if (order.tipo === "preventiva") {
+        return { error: "Marque o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
+      }
+      if (pareceRevisao(order.problema_servico) && str(formData.get("confirmar_sem_plano")) !== "1") {
+        return { error: "Esta OS parece uma revisão e nenhum plano foi marcado. Marque o plano ou confirme o fechamento sem plano." };
+      }
     }
   }
 
@@ -193,6 +199,10 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
     }
   }
 
+  // Vínculo dos planos antes de concluir: com a OS encerrada, só o administrador pode alterá-lo.
+  const vinculoError = await vincularPlanos(supabase, orderId, planIds);
+  if (vinculoError) return { error: `Não foi possível registrar os planos atendidos: ${vinculoError}` };
+
   const { error } = await supabase
     .from("maintenance_orders")
     .update({
@@ -200,21 +210,16 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
       data_conclusao: dataConclusao,
       km,
       horas,
-      vehicle_maintenance_plan_id: planId,
+      vehicle_maintenance_plan_id: planIds[0] ?? null,
     })
     .eq("id", orderId);
   if (error) return { error: `Não foi possível fechar a ordem: ${error.message}` };
 
-  // Fecha o ciclo preventivo: usa esta execução como nova base do plano.
-  if (planId) {
-    const { error: planoError } = await supabase
-      .from("vehicle_maintenance_plans")
-      .update({ ultima_execucao_data: dataConclusao, ultima_execucao_km: km, ultima_execucao_horas: horas })
-      .eq("id", planId);
-    if (planoError) {
-      revalidateOrder(orderId, order.vehicle_id);
-      return { error: `Ordem fechada, mas o plano preventivo não foi atualizado: ${planoError.message}` };
-    }
+  // Fecha o ciclo preventivo: usa esta execução como nova base de cada plano marcado.
+  const planoError = await reiniciarPlanos(supabase, planIds, { data: dataConclusao, km, horas });
+  if (planoError) {
+    revalidateOrder(orderId, order.vehicle_id);
+    return { error: `Ordem fechada, mas o plano preventivo não foi atualizado: ${planoError}` };
   }
   if (order.corrective_issue_id) {
     await supabase.from("corrective_issues").update({ status: "resolvido" }).eq("id", order.corrective_issue_id);
@@ -279,6 +284,113 @@ function revalidateOrder(orderId: string, vehicleId: string) {
   revalidatePath(`/ordens/${orderId}`);
   revalidatePath(`/veiculos/${vehicleId}`);
   revalidatePath("/");
+}
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+// Planos marcados no formulário, filtrados para os que pertencem ao veículo da OS.
+async function planosDoVeiculo(supabase: Supabase, vehicleId: string, formData: FormData): Promise<string[]> {
+  const marcados = Array.from(new Set(formData.getAll("planos").map((v) => v.toString()).filter(Boolean)));
+  if (marcados.length === 0) return [];
+  const { data } = await supabase
+    .from("vehicle_maintenance_plans")
+    .select("id")
+    .eq("vehicle_id", vehicleId)
+    .in("id", marcados);
+  const validos = new Set((data ?? []).map((p) => p.id));
+  return marcados.filter((id) => validos.has(id));
+}
+
+// Grava os planos atendidos pela OS (substitui os anteriores).
+async function vincularPlanos(supabase: Supabase, orderId: string, planIds: string[]): Promise<string | null> {
+  const { error: limparError } = await supabase.from("maintenance_order_plans").delete().eq("order_id", orderId);
+  if (limparError) return limparError.message;
+  if (planIds.length === 0) return null;
+  const { error } = await supabase
+    .from("maintenance_order_plans")
+    .insert(planIds.map((vehicle_plan_id) => ({ order_id: orderId, vehicle_plan_id })));
+  return error ? error.message : null;
+}
+
+// Reinicia a contagem dos planos com esta execução, sem sobrescrever uma execução mais recente.
+async function reiniciarPlanos(
+  supabase: Supabase,
+  planIds: string[],
+  execucao: { data: string; km: number | null; horas: number | null },
+): Promise<string | null> {
+  if (planIds.length === 0) return null;
+  const { data: planos } = await supabase
+    .from("vehicle_maintenance_plans")
+    .select("id, ultima_execucao_data")
+    .in("id", planIds);
+  for (const plano of planos ?? []) {
+    if (plano.ultima_execucao_data && plano.ultima_execucao_data > execucao.data) continue;
+    const { error } = await supabase
+      .from("vehicle_maintenance_plans")
+      .update({
+        ultima_execucao_data: execucao.data,
+        ultima_execucao_km: execucao.km,
+        ultima_execucao_horas: execucao.horas,
+      })
+      .eq("id", plano.id);
+    if (error) return error.message;
+  }
+  return null;
+}
+
+// Corrige tipo e planos atendidos de uma OS já concluída, sem precisar reabrir.
+// Plano incluído passa a ter esta OS como última execução (se for a mais recente);
+// plano retirado só perde o vínculo — a contagem dele não volta atrás sozinha.
+export async function correctClosedOrder(orderId: string, formData: FormData): Promise<ActionResult> {
+  const acesso = await exigirAdmin();
+  if (acesso) return { error: acesso };
+
+  const supabase = await createClient();
+  const { data: order } = await supabase
+    .from("maintenance_orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) return { error: "Ordem não encontrada." };
+  if (order.status !== "concluida" || !order.data_conclusao) {
+    return { error: "A correção vale só para ordem concluída. Ordem aberta é editada normalmente." };
+  }
+
+  const tipo = str(formData.get("tipo")) as OrderTipo | null;
+  if (!tipo || !TIPOS.includes(tipo)) return { error: "Selecione o tipo da ordem." };
+
+  const planIds = await planosDoVeiculo(supabase, order.vehicle_id, formData);
+  if (tipo === "preventiva" && planIds.length === 0) {
+    return { error: "OS preventiva precisa ter ao menos um plano atendido marcado." };
+  }
+
+  const { data: atuais } = await supabase
+    .from("maintenance_order_plans")
+    .select("vehicle_plan_id")
+    .eq("order_id", orderId);
+  const jaVinculados = new Set((atuais ?? []).map((p) => p.vehicle_plan_id));
+  const novos = planIds.filter((id) => !jaVinculados.has(id));
+  if (novos.length > 0 && order.km === null && order.horas === null) {
+    return { error: "Esta OS foi fechada sem KM e sem horímetro; não dá para reiniciar a contagem do plano por ela." };
+  }
+
+  const { error } = await supabase
+    .from("maintenance_orders")
+    .update({ tipo, vehicle_maintenance_plan_id: planIds[0] ?? null })
+    .eq("id", orderId);
+  if (error) return { error: `Não foi possível corrigir a ordem: ${error.message}` };
+
+  const planoError =
+    (await vincularPlanos(supabase, orderId, planIds)) ??
+    (await reiniciarPlanos(supabase, novos, { data: order.data_conclusao, km: order.km, horas: order.horas }));
+  if (planoError) {
+    revalidateOrder(orderId, order.vehicle_id);
+    return { error: `Tipo corrigido, mas os planos não foram atualizados: ${planoError}` };
+  }
+
+  revalidateOrder(orderId, order.vehicle_id);
+  return { id: orderId };
 }
 
 const TIPOS: OrderTipo[] = ["preventiva", "corretiva"];
