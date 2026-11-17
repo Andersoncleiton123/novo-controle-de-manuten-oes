@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { PneusFields } from "@/components/orders/PneusFields";
 import { ORDER_TIPO_LABEL, PRIORIDADE_LABEL } from "@/lib/labels";
 import { todayISO, vehicleOptionLabel } from "@/lib/format";
 import type { Vehicle } from "@/lib/types";
@@ -110,6 +111,8 @@ export function OrderForm({
       <FieldGroup label="Problema / serviço" htmlFor="problema_servico" required>
         <Textarea id="problema_servico" name="problema_servico" rows={3} required defaultValue={defaultProblemaServico ?? ""} />
       </FieldGroup>
+
+      <PneusFields idPrefix="novo_pneu" />
 
       <FieldGroup label="Observações" htmlFor="observacoes">
         <Textarea id="observacoes" name="observacoes" rows={2} />

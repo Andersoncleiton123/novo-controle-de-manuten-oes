@@ -143,6 +143,9 @@ export type MaintenanceOrder = {
   data_conclusao: string | null;
   outros_custos: number;
   observacoes: string | null;
+  // Sinaliza instalação/troca de pneus na OS e as posições (valores de PNEU_POSICOES).
+  instalacao_pneus: boolean;
+  pneus_posicoes: string[];
   created_at: string;
   updated_at: string;
 };

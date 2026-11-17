@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirAprovado } from "@/lib/auth";
 import { pareceRevisao } from "@/lib/orders";
+import { PNEU_POSICOES } from "@/lib/labels";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -18,6 +19,14 @@ function num(v: FormDataEntryValue | null): number | null {
   if (s === null) return null;
   const n = Number(s.replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+// Instalação de pneus: só vale com o campo marcado; posições fora da lista são descartadas.
+function pneusDoFormulario(formData: FormData): { instalacao_pneus: boolean; pneus_posicoes: string[] } {
+  const instalacao = str(formData.get("instalacao_pneus")) === "1";
+  if (!instalacao) return { instalacao_pneus: false, pneus_posicoes: [] };
+  const posicoes = Array.from(new Set(formData.getAll("pneus_posicoes").map((v) => v.toString())));
+  return { instalacao_pneus: true, pneus_posicoes: posicoes.filter((p) => PNEU_POSICOES.includes(p)) };
 }
 
 async function resolveSupplierId(
@@ -70,6 +79,7 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
     responsavel: str(formData.get("responsavel")),
     data_prevista: str(formData.get("data_prevista")),
     observacoes: str(formData.get("observacoes")),
+    ...pneusDoFormulario(formData),
   };
 
   const { data, error } = await supabase.from("maintenance_orders").insert(payload).select("id").single();
@@ -447,6 +457,7 @@ export async function updateOrderDetails(orderId: string, formData: FormData): P
       fornecedor_id: fornecedorId,
       responsavel: str(formData.get("responsavel")),
       observacoes: str(formData.get("observacoes")),
+      ...pneusDoFormulario(formData),
     })
     .eq("id", orderId);
   if (error) return { error: `Não foi possível salvar a ordem: ${error.message}` };

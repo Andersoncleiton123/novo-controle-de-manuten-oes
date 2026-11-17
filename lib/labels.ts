@@ -84,6 +84,24 @@ export const ORDER_TIPO_LABEL: Record<OrderTipo, string> = {
   corretiva: "Corretiva",
 };
 
+// Posições de pneu, as mesmas aceitas pelo banco (tire_changes e maintenance_orders.pneus_posicoes).
+export const PNEU_POSICAO_LABEL: Record<string, string> = {
+  dianteiro_esquerdo: "Dianteiro esquerdo",
+  dianteiro_direito: "Dianteiro direito",
+  traseiro_esquerdo: "Traseiro esquerdo",
+  traseiro_direito: "Traseiro direito",
+  traseiro_eixo1_esquerdo_externo: "Eixo 1 · esquerdo externo",
+  traseiro_eixo1_esquerdo_interno: "Eixo 1 · esquerdo interno",
+  traseiro_eixo1_direito_interno: "Eixo 1 · direito interno",
+  traseiro_eixo1_direito_externo: "Eixo 1 · direito externo",
+  traseiro_eixo2_esquerdo_externo: "Eixo 2 · esquerdo externo",
+  traseiro_eixo2_esquerdo_interno: "Eixo 2 · esquerdo interno",
+  traseiro_eixo2_direito_interno: "Eixo 2 · direito interno",
+  traseiro_eixo2_direito_externo: "Eixo 2 · direito externo",
+};
+
+export const PNEU_POSICOES = Object.keys(PNEU_POSICAO_LABEL);
+
 export const NIVEL_ALERTA_LABEL: Record<NivelAlerta, string> = {
   em_dia: "Em dia",
   proxima: "Próxima",

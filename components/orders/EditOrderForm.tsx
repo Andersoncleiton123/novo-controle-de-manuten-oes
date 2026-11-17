@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Pencil } from "lucide-react";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { PneusFields } from "@/components/orders/PneusFields";
 import { ORDER_TIPO_LABEL, PRIORIDADE_LABEL } from "@/lib/labels";
 import type { OrderTipo, Prioridade } from "@/lib/types";
 
@@ -20,6 +21,8 @@ export function EditOrderForm({
   observacoes,
   planoId,
   planos,
+  instalacaoPneus,
+  pneusPosicoes,
   action,
 }: {
   tipo: OrderTipo;
@@ -31,6 +34,8 @@ export function EditOrderForm({
   observacoes: string | null;
   planoId: string | null;
   planos: { id: string; nome: string }[];
+  instalacaoPneus: boolean;
+  pneusPosicoes: string[];
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -128,6 +133,7 @@ export function EditOrderForm({
           <Input id="edit_responsavel" name="responsavel" defaultValue={responsavel ?? ""} />
         </FieldGroup>
       </div>
+      <PneusFields idPrefix="edit_pneu" defaultChecked={instalacaoPneus} defaultPosicoes={pneusPosicoes} />
       <FieldGroup label="Observações" htmlFor="edit_observacoes">
         <Textarea id="edit_observacoes" name="observacoes" rows={2} defaultValue={observacoes ?? ""} />
       </FieldGroup>

@@ -140,6 +140,7 @@ export default async function OrdensPage({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {o.instalacao_pneus ? <Badge className="bg-indigo-100 text-indigo-800">Pneus</Badge> : null}
                     <Badge className={PRIORIDADE_COLOR[o.prioridade]}>{PRIORIDADE_LABEL[o.prioridade]}</Badge>
                     <Badge className={ORDER_STATUS_COLOR[o.status]}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                   </div>

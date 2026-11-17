@@ -30,7 +30,14 @@ import {
   updateOtherCosts,
 } from "@/app/ordens/actions";
 import { formatCurrency, formatDate, formatHoras, formatKm } from "@/lib/format";
-import { ORDER_STATUS_COLOR, ORDER_STATUS_LABEL, ORDER_TIPO_LABEL, PRIORIDADE_COLOR, PRIORIDADE_LABEL } from "@/lib/labels";
+import {
+  ORDER_STATUS_COLOR,
+  ORDER_STATUS_LABEL,
+  ORDER_TIPO_LABEL,
+  PNEU_POSICAO_LABEL,
+  PRIORIDADE_COLOR,
+  PRIORIDADE_LABEL,
+} from "@/lib/labels";
 import type { MaintenanceOrder, MaintenanceOrderItem, Supplier, Vehicle } from "@/lib/types";
 
 export const revalidate = 0;
@@ -98,6 +105,7 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
             <Badge className={PRIORIDADE_COLOR[order.prioridade]}>{PRIORIDADE_LABEL[order.prioridade]}</Badge>
             <Badge className={ORDER_STATUS_COLOR[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
             <Badge className="bg-gray-100 text-gray-600">{ORDER_TIPO_LABEL[order.tipo]}</Badge>
+            {order.instalacao_pneus ? <Badge className="bg-indigo-100 text-indigo-800">Instalação de pneus</Badge> : null}
           </div>
           {order.vehicles ? (
             <Link href={`/veiculos/${order.vehicle_id}`} className="text-sm text-brand-600 hover:underline">
@@ -125,6 +133,16 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
               <EditableReadings km={order.km} horas={order.horas} action={updateOrderReadings.bind(null, id)} />
             </div>
           ) : null}
+          {order.instalacao_pneus ? (
+            <p className="mt-2 text-sm text-gray-700">
+              Pneus:{" "}
+              {order.pneus_posicoes.length > 0 ? (
+                order.pneus_posicoes.map((p) => PNEU_POSICAO_LABEL[p] ?? p).join(", ")
+              ) : (
+                <span className="text-amber-700">posições não informadas</span>
+              )}
+            </p>
+          ) : null}
           {order.observacoes ? <p className="mt-2 text-sm text-gray-600">{order.observacoes}</p> : null}
           {!encerrada ? (
             <div className="mt-3 border-t border-gray-100 pt-3">
@@ -138,6 +156,8 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                 observacoes={order.observacoes}
                 planoId={order.vehicle_maintenance_plan_id}
                 planos={planosOpcoes}
+                instalacaoPneus={order.instalacao_pneus}
+                pneusPosicoes={order.pneus_posicoes}
                 action={updateOrderDetails.bind(null, id)}
               />
             </div>
