@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirAprovado } from "@/lib/auth";
+import { ehPlanoDeOleo, MSG_SEM_ITEM_OLEO, temTrocaDeOleo } from "@/lib/orders";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -155,16 +156,8 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
   if (planIds.length > 0 && km === null && horas === null) {
     return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
   }
-  if (order.tipo === "preventiva" && planIds.length === 0) {
-    const { count } = await supabase
-      .from("vehicle_maintenance_plans")
-      .select("id", { count: "exact", head: true })
-      .eq("vehicle_id", order.vehicle_id)
-      .eq("ativo", true);
-    if ((count ?? 0) > 0) {
-      return { error: "Marque o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
-    }
-  }
+  const erroOleo = await validarTrocaDeOleo(supabase, orderId, order.vehicle_id, order.tipo, planIds);
+  if (erroOleo) return { error: erroOleo };
 
   // Registra a leitura da execução antes de fechar: o banco recusa KM/horímetro fora de ordem
   // em relação às medições anteriores e seguintes do veículo.
@@ -296,6 +289,33 @@ async function planosDoVeiculo(supabase: Supabase, vehicleId: string, formData: 
   return marcados.filter((id) => validos.has(id));
 }
 
+// Plano de troca de óleo do motor só reinicia com item de óleo do motor lançado na OS.
+// Quando a OS preventiva tem o item e o veículo tem o plano de óleo, o plano precisa estar marcado.
+async function validarTrocaDeOleo(
+  supabase: Supabase,
+  orderId: string,
+  vehicleId: string,
+  tipo: OrderTipo,
+  planIds: string[],
+): Promise<string | null> {
+  const { data: itens } = await supabase.from("maintenance_order_items").select("descricao").eq("order_id", orderId);
+  const trocouOleo = temTrocaDeOleo((itens ?? []).map((i) => i.descricao));
+
+  const { data: planosVeiculo } = await supabase
+    .from("vehicle_maintenance_plans")
+    .select("id, maintenance_plans!inner(nome)")
+    .eq("vehicle_id", vehicleId)
+    .eq("ativo", true)
+    .returns<{ id: string; maintenance_plans: { nome: string } }[]>();
+  const oleoIds = (planosVeiculo ?? []).filter((p) => ehPlanoDeOleo(p.maintenance_plans.nome)).map((p) => p.id);
+
+  if (!trocouOleo && planIds.some((id) => oleoIds.includes(id))) return MSG_SEM_ITEM_OLEO;
+  if (tipo === "preventiva" && trocouOleo && oleoIds.length > 0 && !planIds.some((id) => oleoIds.includes(id))) {
+    return "Esta OS tem troca de óleo do motor: marque o plano de troca de óleo para reiniciar a contagem.";
+  }
+  return null;
+}
+
 // Grava os planos atendidos pela OS (substitui os anteriores).
 async function vincularPlanos(supabase: Supabase, orderId: string, planIds: string[]): Promise<string | null> {
   const { error: limparError } = await supabase.from("maintenance_order_plans").delete().eq("order_id", orderId);
@@ -356,9 +376,8 @@ export async function correctClosedOrder(orderId: string, formData: FormData): P
   if (!tipo || !TIPOS.includes(tipo)) return { error: "Selecione o tipo da ordem." };
 
   const planIds = await planosDoVeiculo(supabase, order.vehicle_id, formData);
-  if (tipo === "preventiva" && planIds.length === 0) {
-    return { error: "OS preventiva precisa ter ao menos um plano atendido marcado." };
-  }
+  const erroOleo = await validarTrocaDeOleo(supabase, orderId, order.vehicle_id, tipo, planIds);
+  if (erroOleo) return { error: erroOleo };
 
   const { data: atuais } = await supabase
     .from("maintenance_order_plans")

@@ -14,11 +14,15 @@ export function CorrectOrderForm({
   tipo,
   planos,
   planosMarcados,
+  trocouOleo,
+  planosOleoIds,
   action,
 }: {
   tipo: OrderTipo;
   planos: { id: string; nome: string }[];
   planosMarcados: string[];
+  trocouOleo: boolean;
+  planosOleoIds: string[];
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -76,7 +80,9 @@ export function CorrectOrderForm({
         planos={planos}
         marcados={marcados}
         onChange={setMarcados}
-        obrigatorio={tipoAtual === "preventiva"}
+        obrigatorio={tipoAtual === "preventiva" && trocouOleo && planosOleoIds.length > 0}
+        desabilitados={trocouOleo ? [] : planosOleoIds}
+        motivoDesabilitado="lance o item de óleo do motor na OS"
         hint="Plano marcado agora passa a ter esta OS (data de conclusão, KM e horímetro) como última execução, se for a mais recente"
       />
       {retirados.length > 0 ? (
