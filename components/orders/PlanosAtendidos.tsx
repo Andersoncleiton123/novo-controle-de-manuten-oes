@@ -7,12 +7,16 @@ export function PlanosAtendidos({
   onChange,
   obrigatorio = false,
   hint,
+  desabilitados = [],
+  motivoDesabilitado,
 }: {
   planos: { id: string; nome: string }[];
   marcados: string[];
   onChange: (ids: string[]) => void;
   obrigatorio?: boolean;
   hint?: string;
+  desabilitados?: string[];
+  motivoDesabilitado?: string;
 }) {
   return (
     <fieldset className="space-y-1.5">
@@ -31,11 +35,15 @@ export function PlanosAtendidos({
                 name="planos"
                 value={p.id}
                 checked={marcados.includes(p.id)}
+                disabled={desabilitados.includes(p.id)}
                 onChange={(e) =>
                   onChange(e.target.checked ? [...marcados, p.id] : marcados.filter((id) => id !== p.id))
                 }
               />
               {p.nome}
+              {desabilitados.includes(p.id) && motivoDesabilitado ? (
+                <span className="text-xs text-amber-700">({motivoDesabilitado})</span>
+              ) : null}
             </label>
           ))}
         </div>

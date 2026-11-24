@@ -15,6 +15,8 @@ export function CloseOrderForm({
   planos,
   planosMarcados,
   preventiva,
+  trocouOleo,
+  planosOleoIds,
   action,
 }: {
   km: number | null;
@@ -22,6 +24,8 @@ export function CloseOrderForm({
   planos: { id: string; nome: string }[];
   planosMarcados: string[];
   preventiva: boolean;
+  trocouOleo: boolean;
+  planosOleoIds: string[];
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -33,7 +37,9 @@ export function CloseOrderForm({
   const [pending, startTransition] = useTransition();
 
   // Preventiva precisa apontar o plano atendido, senão a contagem para a próxima troca não reinicia.
-  const exigePlano = preventiva && planos.length > 0;
+  // Só exige plano quando a OS tem troca de óleo lançada: sem o item, o plano de óleo não pode ser marcado.
+  const exigePlano = preventiva && trocouOleo && planosOleoIds.length > 0;
+  const planosBloqueados = trocouOleo ? [] : planosOleoIds;
   // Corretiva não mexe na contagem dos planos: sem seleção de plano, sem aviso e sem confirmação.
 
   if (!aberto) {
@@ -48,7 +54,7 @@ export function CloseOrderForm({
         e.preventDefault();
         setError(null);
         if (exigePlano && marcados.length === 0) {
-          setError("Marque o plano preventivo atendido para reiniciar a contagem da próxima manutenção.");
+          setError("Esta OS tem troca de óleo do motor: marque o plano de troca de óleo para reiniciar a contagem.");
           return;
         }
         const formData = new FormData(e.currentTarget);
@@ -82,6 +88,8 @@ export function CloseOrderForm({
           marcados={marcados}
           onChange={setMarcados}
           obrigatorio={exigePlano}
+          desabilitados={planosBloqueados}
+          motivoDesabilitado="lance o item de óleo do motor na OS"
           hint="A data, o KM e o horímetro acima passam a ser a última execução de cada plano marcado e reiniciam a contagem para a próxima"
         />
       ) : null}

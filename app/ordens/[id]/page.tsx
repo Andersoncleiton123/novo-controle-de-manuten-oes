@@ -7,6 +7,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { OrderStatusForm } from "@/components/orders/OrderStatusForm";
+import { temTrocaDeOleo, ehPlanoDeOleo } from "@/lib/orders";
 import { CloseOrderForm } from "@/components/orders/CloseOrderForm";
 import { ReopenOrderForm } from "@/components/orders/ReopenOrderForm";
 import { CorrectOrderForm } from "@/components/orders/CorrectOrderForm";
@@ -67,6 +68,8 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
 
   const encerrada = order.status === "concluida" || order.status === "cancelada";
   const planosOpcoes = (planos ?? []).map((p) => ({ id: p.id, nome: p.maintenance_plans.nome }));
+  const trocouOleo = temTrocaDeOleo((items ?? []).map((i) => i.descricao));
+  const planosOleoIds = planosOpcoes.filter((p) => ehPlanoDeOleo(p.nome)).map((p) => p.id);
 
   const { data: vinculos } = await supabase
     .from("maintenance_order_plans")
@@ -174,6 +177,8 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                       tipo={order.tipo}
                       planos={planosOpcoes}
                       planosMarcados={planosMarcados}
+                      trocouOleo={trocouOleo}
+                      planosOleoIds={planosOleoIds}
                       action={correctClosedOrder.bind(null, id)}
                     />
                   ) : null}
@@ -195,6 +200,8 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                   planos={planosOpcoes}
                   planosMarcados={planosMarcados}
                   preventiva={order.tipo === "preventiva"}
+                  trocouOleo={trocouOleo}
+                  planosOleoIds={planosOleoIds}
                   action={closeOrder.bind(null, id)}
                 />
               </div>
