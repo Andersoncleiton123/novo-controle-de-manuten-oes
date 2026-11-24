@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/Field";
@@ -17,6 +18,7 @@ export function OrderForm({
   correctiveIssueId,
   vehicleMaintenancePlanId,
   defaultProblemaServico,
+  ordensAbertas = [],
   action,
 }: {
   vehicles: Pick<Vehicle, "id" | "nome" | "identificador" | "numero_interno">[];
@@ -25,11 +27,17 @@ export function OrderForm({
   correctiveIssueId?: string;
   vehicleMaintenancePlanId?: string;
   defaultProblemaServico?: string;
+  ordensAbertas?: { id: string; numero_os: string; vehicle_id: string; tipo: "preventiva" | "corretiva" }[];
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [vehicleId, setVehicleId] = useState(defaultVehicleId ?? "");
+  const [tipo, setTipo] = useState<"preventiva" | "corretiva">(defaultTipo ?? "corretiva");
+  const [duplicadaConfirmada, setDuplicadaConfirmada] = useState(false);
+
+  const duplicadas = ordensAbertas.filter((o) => o.vehicle_id === vehicleId && o.tipo === tipo);
 
   return (
     <form
@@ -58,7 +66,16 @@ export function OrderForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FieldGroup label="Veículo" htmlFor="vehicle_id" required>
-          <Select id="vehicle_id" name="vehicle_id" required defaultValue={defaultVehicleId ?? ""}>
+          <Select
+            id="vehicle_id"
+            name="vehicle_id"
+            required
+            value={vehicleId}
+            onChange={(e) => {
+              setVehicleId(e.target.value);
+              setDuplicadaConfirmada(false);
+            }}
+          >
             <option value="" disabled>
               Selecione…
             </option>
@@ -70,7 +87,15 @@ export function OrderForm({
           </Select>
         </FieldGroup>
         <FieldGroup label="Tipo" htmlFor="tipo" required>
-          <Select id="tipo" name="tipo" defaultValue={defaultTipo ?? "corretiva"}>
+          <Select
+            id="tipo"
+            name="tipo"
+            value={tipo}
+            onChange={(e) => {
+              setTipo(e.target.value as "preventiva" | "corretiva");
+              setDuplicadaConfirmada(false);
+            }}
+          >
             {Object.entries(ORDER_TIPO_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -114,6 +139,33 @@ export function OrderForm({
       <FieldGroup label="Observações" htmlFor="observacoes">
         <Textarea id="observacoes" name="observacoes" rows={2} />
       </FieldGroup>
+
+      {duplicadas.length > 0 ? (
+        <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <input
+            type="checkbox"
+            name="confirmar_duplicada"
+            value="1"
+            required
+            checked={duplicadaConfirmada}
+            onChange={(e) => setDuplicadaConfirmada(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Este veículo já tem {duplicadas.length === 1 ? "uma OS" : "OS"} {ORDER_TIPO_LABEL[tipo].toLowerCase()}{" "}
+            em andamento:{" "}
+            {duplicadas.map((o, i) => (
+              <span key={o.id}>
+                {i > 0 ? ", " : ""}
+                <Link href={`/ordens/${o.id}`} target="_blank" className="font-medium underline">
+                  {o.numero_os}
+                </Link>
+              </span>
+            ))}
+            . Confirme que esta é outra ordem e não uma duplicidade.
+          </span>
+        </label>
+      ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="submit" disabled={pending}>

@@ -31,6 +31,13 @@ export default async function NovaOrdemPage({
 
   const issue = issueResult.data;
 
+  // OS ainda em andamento: base do aviso de duplicidade ao abrir outra OS do mesmo tipo no veículo.
+  const { data: abertas } = await supabase
+    .from("maintenance_orders")
+    .select("id, numero_os, vehicle_id, tipo")
+    .not("status", "in", "(concluida,cancelada)")
+    .returns<{ id: string; numero_os: string; vehicle_id: string; tipo: "preventiva" | "corretiva" }[]>();
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
@@ -53,6 +60,7 @@ export default async function NovaOrdemPage({
             correctiveIssueId={issue?.id}
             vehicleMaintenancePlanId={plano}
             defaultProblemaServico={issue?.descricao}
+            ordensAbertas={abertas ?? []}
             action={createOrder}
           />
         </CardBody>

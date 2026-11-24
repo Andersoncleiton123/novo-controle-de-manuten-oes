@@ -52,6 +52,19 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   const problemaServico = str(formData.get("problema_servico"));
   if (!problemaServico) return { error: "Descreva o problema ou serviço." };
 
+  // Avisa sobre duplicidade: já existe OS em andamento do mesmo tipo no veículo.
+  const tipoOrdem = (str(formData.get("tipo")) ?? "corretiva") as OrderTipo;
+  const { data: emAndamento } = await supabase
+    .from("maintenance_orders")
+    .select("numero_os")
+    .eq("vehicle_id", vehicleId)
+    .eq("tipo", tipoOrdem)
+    .not("status", "in", "(concluida,cancelada)");
+  if ((emAndamento ?? []).length > 0 && str(formData.get("confirmar_duplicada")) !== "1") {
+    const numeros = (emAndamento ?? []).map((o) => o.numero_os).join(", ");
+    return { error: `Este veículo já tem OS ${tipoOrdem} em andamento (${numeros}). Confirme que esta é outra ordem para abrir.` };
+  }
+
   const fornecedorId = await resolveSupplierId(supabase, str(formData.get("fornecedor")));
   const correctiveIssueId = str(formData.get("corrective_issue_id"));
   const vehicleMaintenancePlanId = str(formData.get("vehicle_maintenance_plan_id"));
