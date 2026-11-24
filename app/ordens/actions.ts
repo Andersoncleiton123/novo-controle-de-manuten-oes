@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirAprovado } from "@/lib/auth";
-import { pareceRevisao } from "@/lib/orders";
 import type { MaintenanceOrder, OrderStatus, OrderTipo, Prioridade } from "@/lib/types";
 
 type ActionResult = { error?: string; id?: string };
@@ -151,23 +150,19 @@ export async function closeOrder(orderId: string, formData: FormData): Promise<A
 
   const km = num(formData.get("km"));
   const horas = num(formData.get("horas"));
-  const planIds = await planosDoVeiculo(supabase, order.vehicle_id, formData);
+  // Só a preventiva reinicia a contagem dos planos; a corretiva fecha sem aviso e sem mexer nos planos.
+  const planIds = order.tipo === "preventiva" ? await planosDoVeiculo(supabase, order.vehicle_id, formData) : [];
   if (planIds.length > 0 && km === null && horas === null) {
     return { error: "Informe o KM ou o horímetro da execução para atualizar o plano preventivo." };
   }
-  if (planIds.length === 0) {
+  if (order.tipo === "preventiva" && planIds.length === 0) {
     const { count } = await supabase
       .from("vehicle_maintenance_plans")
       .select("id", { count: "exact", head: true })
       .eq("vehicle_id", order.vehicle_id)
       .eq("ativo", true);
     if ((count ?? 0) > 0) {
-      if (order.tipo === "preventiva") {
-        return { error: "Marque o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
-      }
-      if (pareceRevisao(order.problema_servico) && str(formData.get("confirmar_sem_plano")) !== "1") {
-        return { error: "Esta OS parece uma revisão e nenhum plano foi marcado. Marque o plano ou confirme o fechamento sem plano." };
-      }
+      return { error: "Marque o plano preventivo atendido para reiniciar a contagem da próxima manutenção." };
     }
   }
 
