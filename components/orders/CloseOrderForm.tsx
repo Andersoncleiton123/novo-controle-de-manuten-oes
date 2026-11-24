@@ -6,7 +6,6 @@ import { FieldGroup, Input } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { PlanosAtendidos } from "@/components/orders/PlanosAtendidos";
 import { todayISO } from "@/lib/format";
-import { pareceRevisao } from "@/lib/orders";
 
 type ActionResult = { error?: string; id?: string };
 
@@ -16,7 +15,6 @@ export function CloseOrderForm({
   planos,
   planosMarcados,
   preventiva,
-  descricao,
   action,
 }: {
   km: number | null;
@@ -24,7 +22,6 @@ export function CloseOrderForm({
   planos: { id: string; nome: string }[];
   planosMarcados: string[];
   preventiva: boolean;
-  descricao: string;
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -32,14 +29,12 @@ export function CloseOrderForm({
   const [marcados, setMarcados] = useState<string[]>(
     planosMarcados.length > 0 ? planosMarcados : preventiva && planos.length === 1 ? [planos[0].id] : [],
   );
-  const [semPlanoConfirmado, setSemPlanoConfirmado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Preventiva precisa apontar o plano atendido, senão a contagem para a próxima troca não reinicia.
   const exigePlano = preventiva && planos.length > 0;
-  // Corretiva com cara de revisão: pede confirmação explícita antes de fechar sem plano.
-  const avisoRevisao = !preventiva && planos.length > 0 && marcados.length === 0 && pareceRevisao(descricao);
+  // Corretiva não mexe na contagem dos planos: sem seleção de plano, sem aviso e sem confirmação.
 
   if (!aberto) {
     return (
@@ -81,29 +76,14 @@ export function CloseOrderForm({
           <Input id="close_horas" name="horas" type="number" step="1" min={0} defaultValue={horas ?? ""} />
         </FieldGroup>
       </div>
-      <PlanosAtendidos
-        planos={planos}
-        marcados={marcados}
-        onChange={setMarcados}
-        obrigatorio={exigePlano}
-        hint="A data, o KM e o horímetro acima passam a ser a última execução de cada plano marcado e reiniciam a contagem para a próxima"
-      />
-      {avisoRevisao ? (
-        <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          <input
-            type="checkbox"
-            name="confirmar_sem_plano"
-            value="1"
-            required
-            checked={semPlanoConfirmado}
-            onChange={(e) => setSemPlanoConfirmado(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span>
-            Esta OS parece uma revisão e nenhum plano foi marcado. Sem plano, a contagem da próxima manutenção não
-            reinicia. Marque acima o plano atendido ou confirme aqui que nenhum plano foi feito.
-          </span>
-        </label>
+      {preventiva ? (
+        <PlanosAtendidos
+          planos={planos}
+          marcados={marcados}
+          onChange={setMarcados}
+          obrigatorio={exigePlano}
+          hint="A data, o KM e o horímetro acima passam a ser a última execução de cada plano marcado e reiniciam a contagem para a próxima"
+        />
       ) : null}
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>

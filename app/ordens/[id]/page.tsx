@@ -195,7 +195,6 @@ export default async function OrdemDetailPage({ params }: { params: Promise<{ id
                   planos={planosOpcoes}
                   planosMarcados={planosMarcados}
                   preventiva={order.tipo === "preventiva"}
-                  descricao={order.problema_servico}
                   action={closeOrder.bind(null, id)}
                 />
               </div>
